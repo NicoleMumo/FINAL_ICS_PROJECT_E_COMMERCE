@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Production
+/build
+/dist
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db 
+
+# Node.js
+node_modules/
+.env
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.pnpm-store
+
+# Prisma
+/server/prisma/migrations/
+/server/prisma/dev.db # Or whatever your database file is named
+/server/node_modules/ # Redundant if top-level node_modules is ignored, but good to be explicit
+/server/src/node_modules/ # If you have a node_modules specifically in src
+
+# Logs
+*.log
+logs/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDEs and other tools
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Frontend build output (e.g., React build)
+/client/build/
+/client/node_modules/ # Redundant if top-level node_modules is ignored
+
+# Other
+*.zip
+*.rar
