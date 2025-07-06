@@ -25,7 +25,7 @@ import Analytics from "./components/farmer/Analytics";
 import ConsumerDashboard from "./components/consumer/Dashboard";
 
 // Admin Portal Components
-import AdminDashboard from "./components/admin/Dashboard";
+import AdminDashboard from './components/admin/AdminDashboard';
 
 // Auth Components
 import Login from "./components/auth/Login";

@@ -7,6 +7,7 @@ const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 // If your .env is in 'server/' and index.js is in 'server/src/',
 // you need to go one level up to find the .env file.
@@ -27,6 +28,7 @@ app.use("/api", productRoutes);
 app.use("/api", orderRoutes);
 app.use("/api", categoryRoutes);
 app.use("/api", dashboardRoutes);
+app.use("/api", adminRoutes);
 
 app.get("/", (req, res) => {
   res.send("FarmDirect Backend API is running!");
