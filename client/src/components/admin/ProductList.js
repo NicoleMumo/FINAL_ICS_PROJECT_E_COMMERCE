@@ -136,7 +136,7 @@ const ProductList = () => {
                   <TableCell>{product.price}</TableCell>
                   <TableCell>{product.stock}</TableCell>
                   <TableCell>{product.category?.name || ''}</TableCell>
-                  <TableCell>{product.user?.name || ''}</TableCell>
+                  <TableCell>{product.farmer?.name || ''}</TableCell>
                   <TableCell align="right">
                     <Tooltip title="Edit">
                       <IconButton onClick={() => handleEdit(product)}>

@@ -73,12 +73,12 @@ exports.getAllProducts = async (req, res) => {
     const products = await prisma.product.findMany({
       include: {
         category: { select: { name: true } },
-        user: { select: { name: true, email: true } },
+        farmer: { select: { name: true, email: true } },
       },
     });
     res.json(products);
   } catch (error) {
-    console.error('Error fetching products:', error); // Print full error
+    console.error('Error fetching products:', error);
     res.status(500).json({ message: 'Error fetching products', error: error.message });
   }
 };
