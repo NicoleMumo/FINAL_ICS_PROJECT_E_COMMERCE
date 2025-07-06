@@ -20,6 +20,7 @@ import Products from "./components/farmer/Products";
 import Inventory from "./components/farmer/Inventory";
 import Orders from "./components/farmer/Orders";
 import Analytics from "./components/farmer/Analytics";
+import EditProductForm from "./components/farmer/EditProductForm"; // Import EditProductForm
 
 // Consumer Portal Components
 import ConsumerDashboard from "./components/consumer/Dashboard";
@@ -99,6 +100,7 @@ function App() {
           <Route path="/farmer/inventory" element={<Inventory />} />
           <Route path="/farmer/orders" element={<Orders />} />
           <Route path="/farmer/analytics" element={<Analytics />} />
+          <Route path="/farmer/products/edit/:productId" element={<EditProductForm />} /> {/* Edit Product Route */}
 
           {/* Consumer Portal Route (now public) */}
           <Route path="/consumer/dashboard" element={<ConsumerDashboard />} />
@@ -114,4 +116,4 @@ function App() {
   );
 }
 
-export default App; 
+export default App;

@@ -3,20 +3,39 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
   Box,
-  Typography,
-  Paper,
   Grid,
+  Paper,
+  Typography,
   CircularProgress,
   Alert,
+  Avatar,
 } from "@mui/material";
-// For charts, you might use libraries like Chart.js or Recharts
-// import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { MonetizationOn, TrendingUp, Star } from "@mui/icons-material";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import FarmerLayout from "../../layouts/FarmerLayout";
 
-import FarmerLayout from "../../layouts/FarmerLayout"; // Corrected path
+const API_BASE_URL = "http://localhost:5000";
 
 const Analytics = () => {
-  const [salesData, setSalesData] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [topProducts, setTopProducts] = useState([]);
+  const [salesTrend, setSalesTrend] = useState([]);
+  const [orderStatus, setOrderStatus] = useState([]);
+  const [categorySales, setCategorySales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -26,182 +45,192 @@ const Analytics = () => {
         setLoading(true);
         setError("");
         const token = localStorage.getItem("token");
+        const headers = { Authorization: `Bearer ${token}` };
 
-        // IMPORTANT: These endpoints are examples. You'll need to create
-        // backend routes specifically for farmer analytics (e.g., /api/farmer/sales-summary, /api/farmer/top-products)
-        // const salesResponse = await axios.get("http://localhost:5000/api/farmer/sales-summary", {
-        //   headers: { Authorization: `Bearer ${token}` },
-        // });
-        // setSalesData(salesResponse.data);
+        const [summaryRes, topProductsRes, salesTrendRes, orderStatusRes, categorySalesRes] = await Promise.all([
+          axios.get(`${API_BASE_URL}/api/sales-summary`, { headers }),
+          axios.get(`${API_BASE_URL}/api/top-products`, { headers }),
+          axios.get(`${API_BASE_URL}/api/sales-trend`, { headers }),
+          axios.get(`${API_BASE_URL}/api/order-status`, { headers }),
+          axios.get(`${API_BASE_URL}/api/category-sales`, { headers }),
+        ]);
 
-        // const productsResponse = await axios.get("http://localhost:5000/api/farmer/top-products", {
-        //   headers: { Authorization: `Bearer ${token}` },
-        // });
-        // setTopProducts(productsResponse.data);
-
-        // --- Dummy Data for Frontend Demo ---
-        setTimeout(() => {
-          setSalesData([
-            { month: "Jan", sales: 4000 },
-            { month: "Feb", sales: 3000 },
-            { month: "Mar", sales: 5000 },
-            { month: "Apr", sales: 4500 },
-            { month: "May", sales: 6000 },
-            { month: "Jun", sales: 5500 },
-          ]);
-          setTopProducts([
-            { name: "Organic Tomatoes", unitsSold: 1200, revenue: 5400 },
-            { name: "Fresh Carrots", unitsSold: 950, revenue: 3040 },
-            { name: "Farm Fresh Eggs (dozen)", unitsSold: 800, revenue: 4000 },
-          ]);
-          setLoading(false);
-        }, 1000); // Simulate API call
-        // --- End Dummy Data ---
+        setSummary(summaryRes.data);
+        setTopProducts(topProductsRes.data);
+        setSalesTrend(salesTrendRes.data);
+        setOrderStatus(orderStatusRes.data);
+        setCategorySales(categorySalesRes.data);
       } catch (err) {
         console.error("Error fetching analytics data:", err);
-        setError("Failed to load analytics data. Please try again.");
+        setError("Failed to fetch analytics data. Please try again.");
+      } finally {
         setLoading(false);
       }
     };
+
     fetchAnalyticsData();
   }, []);
 
+  if (loading) {
+    return (
+      <FarmerLayout>
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+          <CircularProgress />
+        </Box>
+      </FarmerLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <FarmerLayout>
+        <Alert severity="error">{error}</Alert>
+      </FarmerLayout>
+    );
+  }
+
   return (
     <FarmerLayout
-      title="Analytics"
-      subtitle="Insights into your farm's performance"
+      title="Analytics Dashboard"
+      subtitle="An overview of your sales performance"
     >
       <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Paper
-            sx={{
-              p: 3,
-              backgroundColor: "#FFFFFF",
-              boxShadow: 3,
-              borderRadius: 2,
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: "bold", color: "#212121", mb: 2 }}
-            >
-              Sales Overview
-            </Typography>
-            {loading && (
-              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-                <CircularProgress />
-              </Box>
-            )}
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-            {!loading && !error && (
-              <Box>
-                <Typography variant="h4" sx={{ mb: 2 }}>
-                  Total Revenue: $
-                  {salesData
-                    .reduce((sum, item) => sum + item.sales, 0)
-                    .toFixed(2)}
-                </Typography>
-                {/* Example of where a chart would go */}
-                <Box
-                  sx={{
-                    height: 300,
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    bgcolor: "#F5F5F5",
-                    borderRadius: 1,
-                    mb: 2,
-                  }}
-                >
-                  <Typography variant="h6" color="text.secondary">
-                    Monthly Sales Chart (e.g., using Recharts)
-                  </Typography>
-                  {/*
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={salesData}
-                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="sales" fill="#4CAF50" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  */}
-                </Box>
-                <Typography variant="body1" color="text.secondary">
-                  *Integrate a charting library (e.g., Recharts, Chart.js) here
-                  for visualizations.*
-                </Typography>
-              </Box>
-            )}
+        {/* Sales Summary Cards */}
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2, display: "flex", alignItems: "center" }}>
+            <Avatar sx={{ bgcolor: "primary.main", mr: 2 }}>
+              <MonetizationOn />
+            </Avatar>
+            <Box>
+              <Typography variant="h6">Total Revenue</Typography>
+              <Typography variant="h4">
+                Ksh {summary?.totalSales.toFixed(2) || "0.00"}
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2, display: "flex", alignItems: "center" }}>
+            <Avatar sx={{ bgcolor: "secondary.main", mr: 2 }}>
+              <TrendingUp />
+            </Avatar>
+            <Box>
+              <Typography variant="h6">Total Orders</Typography>
+              <Typography variant="h4">{summary?.totalOrders || 0}</Typography>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Paper sx={{ p: 2, display: "flex", alignItems: "center" }}>
+            <Avatar sx={{ bgcolor: "success.main", mr: 2 }}>
+              <Star />
+            </Avatar>
+            <Box>
+              <Typography variant="h6">Unique Customers</Typography>
+              <Typography variant="h4">
+                {summary?.uniqueCustomers || 0}
+              </Typography>
+            </Box>
           </Paper>
         </Grid>
 
-        <Grid item xs={12}>
-          <Paper
-            sx={{
-              p: 3,
-              backgroundColor: "#FFFFFF",
-              boxShadow: 3,
-              borderRadius: 2,
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: "bold", color: "#212121", mb: 2 }}
-            >
-              Top Selling Products
+        {/* Top Selling Products Chart */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={chartPaperStyles}>
+            <Typography variant="h6" gutterBottom>
+              Top 5 Selling Products
             </Typography>
-            {loading && (
-              <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-                <CircularProgress />
-              </Box>
-            )}
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-            {!loading && !error && (
-              <Box>
-                {topProducts.length > 0 ? (
-                  topProducts.map((product, index) => (
-                    <Box
-                      key={index}
-                      sx={{ mb: 1, p: 1, borderBottom: "1px solid #eee" }}
-                    >
-                      <Typography variant="body1" sx={{ fontWeight: "bold" }}>
-                        {product.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Units Sold: {product.unitsSold} | Revenue: $
-                        {product.revenue.toFixed(2)}
-                      </Typography>
-                    </Box>
-                  ))
-                ) : (
-                  <Typography variant="body1" color="text.secondary">
-                    No top selling products data available.
-                  </Typography>
-                )}
-              </Box>
-            )}
+            <ResponsiveContainer width="100%" height="90%">
+              <BarChart data={topProducts}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="totalSold" fill="#8884d8" name="Units Sold" />
+              </BarChart>
+            </ResponsiveContainer>
           </Paper>
         </Grid>
 
-        {/* You can add more analytics sections here, e.g., Inventory Health, Customer Demographics etc. */}
+        {/* Sales Trend Chart */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={chartPaperStyles}>
+            <Typography variant="h6" gutterBottom>
+              Sales Trend (Last 30 Days)
+            </Typography>
+            <ResponsiveContainer width="100%" height="90%">
+              <LineChart data={salesTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="sales" stroke="#82ca9d" name="Daily Sales (Ksh)" />
+              </LineChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Grid>
+
+        {/* Order Status Distribution Chart */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={chartPaperStyles}>
+            <Typography variant="h6" gutterBottom>
+              Order Status Distribution
+            </Typography>
+            <ResponsiveContainer width="100%" height="90%">
+              <PieChart>
+                <Pie data={orderStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} fill="#8884d8" label>
+                  {orderStatus.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Grid>
+
+        {/* Sales by Category Chart */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={chartPaperStyles}>
+            <Typography variant="h6" gutterBottom>
+              Sales by Category
+            </Typography>
+            <ResponsiveContainer width="100%" height="90%">
+              <BarChart data={categorySales}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="sales" fill="#ffc658" name="Total Sales (Ksh)" />
+              </BarChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Grid>
       </Grid>
     </FarmerLayout>
   );
 };
+
+// Styles for the chart containers
+const chartPaperStyles = {
+  p: 2,
+  height: 400,
+  borderRadius: 2,
+  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+  '&:hover': {
+    transform: 'translateY(-4px)',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+  },
+  display: 'flex',
+  flexDirection: 'column',
+};
+
+// Colors for the Pie Chart
+const PIE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 export default Analytics;

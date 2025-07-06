@@ -25,6 +25,7 @@ import {
   Add as AddIcon,
   Notifications as NotificationsIcon,
 } from "@mui/icons-material";
+import LogoutIcon from "@mui/icons-material/Logout";
 
 const FarmerLayout = ({ children, title, subtitle, showAddProduct = true }) => {
   const navigate = useNavigate();
@@ -36,6 +37,11 @@ const FarmerLayout = ({ children, title, subtitle, showAddProduct = true }) => {
 
   const handleAddProductClick = () => {
     navigate("/farmer/add-product");
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
   };
 
   const menuItems = [
@@ -159,8 +165,8 @@ const FarmerLayout = ({ children, title, subtitle, showAddProduct = true }) => {
                 {subtitle}
               </Typography>
             </Box>
-            <Box>
-              <IconButton color="inherit" sx={{ color: "#212121", mr: 1 }}>
+            <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+              <IconButton color="inherit" sx={{ color: "#212121" }}>
                 <NotificationsIcon />
               </IconButton>
               {showAddProduct && (
@@ -176,6 +182,15 @@ const FarmerLayout = ({ children, title, subtitle, showAddProduct = true }) => {
                   Add Product
                 </Button>
               )}
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<LogoutIcon />}
+                onClick={handleSignOut}
+                sx={{ ml: 1 }}
+              >
+                Sign Out
+              </Button>
             </Box>
           </Toolbar>
         </AppBar>

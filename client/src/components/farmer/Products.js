@@ -1,5 +1,5 @@
 // src/components/farmer/Products.js
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
@@ -29,24 +29,24 @@ const Products = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchMyProducts = async () => {
       try {
         setLoading(true);
+        setError("");
         const token = localStorage.getItem("token");
-        const response = await axios.get(`${API_BASE_URL}/api/products`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setProducts(response.data);
+        // Fetch only products for the current farmer
+        const res = await axios.get(
+          `${API_BASE_URL}/api/products/my`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setProducts(res.data);
       } catch (err) {
-        console.error("Error fetching products:", err);
-        setError("Failed to fetch products. Please try again.");
+        setError("Failed to load your products.");
       } finally {
         setLoading(false);
       }
     };
-    fetchProducts();
+    fetchMyProducts();
   }, []);
 
   const handleDeleteProduct = async (productId) => {

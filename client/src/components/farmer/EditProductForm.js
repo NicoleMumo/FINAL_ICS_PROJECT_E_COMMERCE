@@ -171,9 +171,9 @@ const EditProductForm = () => {
     formData.append("categoryId", selectedCategory);
 
     if (productImage) {
-      formData.append("productImage", productImage); // New image file
+      formData.append("image", productImage); // <-- must match backend
     } else if (removeCurrentImage) {
-      formData.append("removeImage", "true"); // Signal backend to remove existing image
+      formData.append("removeImage", "true");
     }
 
     try {

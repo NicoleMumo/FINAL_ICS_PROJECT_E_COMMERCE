@@ -50,7 +50,7 @@ const Orders = () => {
         setLoading(true);
         setError("");
         const token = localStorage.getItem("token");
-        const response = await axios.get(`${API_BASE_URL}/api/orders`, {
+        const response = await axios.get(`${API_BASE_URL}/api/orders/my`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

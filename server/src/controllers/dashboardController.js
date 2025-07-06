@@ -1,80 +1,114 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-exports.getDashboardSummary = async (req, res) => {
+exports.getDashboardData = async (req, res) => {
   try {
-    const totalProducts = await prisma.product.count();
+    const farmerId = req.userData.userId;
 
-    const pendingOrders = await prisma.order.count({
-      where: {
-        status: "PENDING",
-      },
-    });
+    // Parallelize queries for efficiency
+    const [
+      summaryData,
+      recentProducts,
+      recentOrders,
+      topSellingProductsResult,
+    ] = await Promise.all([
+      // 1. Get Summary Data
+      (async () => {
+        const totalProducts = await prisma.product.count({
+          where: { farmerId },
+        });
 
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-      999
-    );
+        const pendingOrders = await prisma.order.count({
+          where: {
+            status: "PENDING",
+            items: { some: { product: { farmerId } } },
+          },
+        });
 
-    const monthlySalesResult = await prisma.order.aggregate({
-      _sum: {
-        total: true,
-      },
-      where: {
-        createdAt: {
-          gte: startOfMonth,
-          lte: endOfMonth,
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999
+        );
+
+        const monthlySalesResult = await prisma.order.aggregate({
+          where: {
+            status: "DELIVERED",
+            createdAt: {
+              gte: startOfMonth,
+              lte: endOfMonth,
+            },
+            items: {
+              some: {
+                product: {
+                  farmerId: farmerId,
+                },
+              },
+            },
+          },
+          _sum: {
+            total: true,
+          },
+        });
+        const monthlySales = monthlySalesResult._sum.total || 0;
+
+        const lowStockItems = await prisma.product.count({
+          where: {
+            farmerId,
+            stock: {
+              lt: 10,
+            },
+          },
+        });
+
+        return { totalProducts, pendingOrders, monthlySales, lowStockItems };
+      })(),
+
+      // 2. Get Recent Product Listings
+      prisma.product.findMany({
+        where: { farmerId },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: { id: true, name: true, stock: true, imageUrl: true },
+      }),
+
+      // 3. Get Recent Orders
+      prisma.order.findMany({
+        where: { items: { some: { product: { farmerId } } } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        include: {
+          user: { select: { name: true, id: true } }, // The buyer
+          items: {
+            include: { product: { select: { name: true } } },
+          },
         },
-      },
-    });
-    const monthlySales = monthlySalesResult._sum.total || 0;
+      }),
 
-    const lowStockItems = await prisma.product.count({
-      where: {
-        stock: {
-          lt: 10,
-        },
-      },
-    });
-
-    res.json({
-      totalProducts,
-      pendingOrders,
-      monthlySales,
-      lowStockItems,
-    });
-  } catch (error) {
-    console.error("Error fetching dashboard summary:", error);
-    res.status(500).json({
-      message: "Error fetching dashboard summary",
-      error: error.message,
-    });
-  }
-};
-
-exports.getTopSellingProducts = async (req, res) => {
-  try {
-    const topSellingProducts = await prisma.orderItem.groupBy({
-      by: ["productId"],
-      _sum: {
-        quantity: true,
-      },
-      orderBy: {
+      // 4. Get Top Selling Products
+      prisma.orderItem.groupBy({
+        by: ["productId"],
+        where: { product: { farmerId } },
         _sum: {
-          quantity: "desc",
+          quantity: true,
         },
-      },
-      take: 5,
-    });
+        orderBy: {
+          _sum: {
+            quantity: "desc",
+          },
+        },
+        take: 5,
+      }),
+    ]);
 
-    const productIds = topSellingProducts.map((item) => item.productId);
+    // Post-process top selling products to include names
+    const productIds = topSellingProductsResult.map((item) => item.productId);
     const products = await prisma.product.findMany({
       where: {
         id: {
@@ -87,7 +121,7 @@ exports.getTopSellingProducts = async (req, res) => {
       },
     });
 
-    const result = topSellingProducts.map((item) => {
+    const topSellingProducts = topSellingProductsResult.map((item) => {
       const product = products.find((p) => p.id === item.productId);
       return {
         name: product ? product.name : "Unknown Product",
@@ -95,139 +129,16 @@ exports.getTopSellingProducts = async (req, res) => {
       };
     });
 
-    res.json(result);
-  } catch (error) {
-    console.error("Error fetching top selling products:", error);
-    res.status(500).json({
-      message: "Error fetching top selling products",
-      error: error.message,
-    });
-  }
-};
-
-exports.getRecentOrders = async (req, res) => {
-  try {
-    const recentOrders = await prisma.order.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 5,
-      include: {
-        user: {
-          select: {
-            name: true,
-          },
-        },
-        orderItems: {
-          include: {
-            product: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    res.json(recentOrders);
-  } catch (error) {
-    console.error("Error fetching recent orders:", error);
-    res.status(500).json({
-      message: "Error fetching recent orders",
-      error: error.message,
-    });
-  }
-};
-
-exports.getLowStockProducts = async (req, res) => {
-  try {
-    const lowStockProducts = await prisma.product.findMany({
-      where: {
-        stock: {
-          lt: 10,
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        stock: true,
-      },
-    });
-
-    res.json(lowStockProducts);
-  } catch (error) {
-    console.error("Error fetching low stock products:", error);
-    res.status(500).json({
-      message: "Error fetching low stock products",
-      error: error.message,
-    });
-  }
-};
-
-exports.getSalesByCategory = async (req, res) => {
-  try {
-    const salesByCategory = await prisma.orderItem.groupBy({
-      by: ["productId"],
-      _sum: {
-        quantity: true,
-      },
-      orderBy: {
-        _sum: {
-          quantity: "desc",
-        },
-      },
-    });
-
-    const categorySales = {};
-
-    for (const item of salesByCategory) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-        select: { categoryId: true },
-      });
-
-      if (product) {
-        if (!categorySales[product.categoryId]) {
-          categorySales[product.categoryId] = 0;
-        }
-        categorySales[product.categoryId] += item._sum.quantity || 0;
-      }
-    }
-
-    res.json(categorySales);
-  } catch (error) {
-    console.error("Error fetching sales by category:", error);
-    res.status(500).json({
-      message: "Error fetching sales by category",
-      error: error.message,
-    });
-  }
-};
-
-exports.getOrderStatistics = async (req, res) => {
-  try {
-    const totalOrders = await prisma.order.count();
-    const completedOrders = await prisma.order.count({
-      where: { status: "COMPLETED" },
-    });
-    const pendingOrders = await prisma.order.count({
-      where: { status: "PENDING" },
-    });
-    const cancelledOrders = await prisma.order.count({
-      where: { status: "CANCELLED" },
-    });
-
     res.json({
-      totalOrders,
-      completedOrders,
-      pendingOrders,
-      cancelledOrders,
+      summaryData,
+      recentProducts,
+      recentOrders,
+      topSellingProducts,
     });
   } catch (error) {
-    console.error("Error fetching order statistics:", error);
+    console.error("Error fetching dashboard data:", error);
     res.status(500).json({
-      message: "Error fetching order statistics",
+      message: "Error fetching dashboard data",
       error: error.message,
     });
   }

@@ -17,8 +17,13 @@ import {
   TablePagination,
   TextField,
   InputAdornment,
+  IconButton,
 } from "@mui/material";
-import { Search as SearchIcon } from "@mui/icons-material";
+import {
+  Search as SearchIcon,
+  Check as CheckIcon,
+  Close as CloseIcon,
+} from "@mui/icons-material";
 import FarmerLayout from "../../layouts/FarmerLayout";
 
 const API_BASE_URL = "http://localhost:5000";
@@ -31,16 +36,19 @@ const Inventory = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // State for inline editing
+  const [editingProductId, setEditingProductId] = useState(null);
+  const [editingStock, setEditingStock] = useState("");
+  const [updateError, setUpdateError] = useState("");
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
         setError("");
         const token = localStorage.getItem("token");
-        const response = await axios.get(`${API_BASE_URL}/api/products`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const response = await axios.get(`${API_BASE_URL}/api/products/my`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
         setProducts(response.data);
       } catch (err) {
@@ -53,13 +61,46 @@ const Inventory = () => {
     fetchProducts();
   }, []);
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
+  const handleChangePage = (event, newPage) => setPage(newPage);
 
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+  };
+
+  const handleEditClick = (product) => {
+    setEditingProductId(product.id);
+    setEditingStock(product.stock);
+    setUpdateError(""); // Clear previous errors
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProductId(null);
+    setEditingStock("");
+  };
+
+  const handleSaveStock = async (productId) => {
+    if (editingStock === "" || isNaN(editingStock) || Number(editingStock) < 0) {
+      setUpdateError("Please enter a valid, non-negative stock number.");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.patch(
+        `${API_BASE_URL}/api/products/${productId}/stock`,
+        { stock: Number(editingStock) },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setProducts(
+        products.map((p) => (p.id === productId ? response.data.product : p))
+      );
+      handleCancelEdit();
+    } catch (err) {
+      console.error("Error updating stock:", err);
+      setUpdateError(err.response?.data?.message || "Failed to update stock.");
+    }
   };
 
   const filteredProducts = products.filter(
@@ -82,10 +123,7 @@ const Inventory = () => {
             mb: 2,
           }}
         >
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: "bold", color: "#212121" }}
-          >
+          <Typography variant="h6" sx={{ fontWeight: "bold", color: "#212121" }}>
             Current Stock
           </Typography>
           <TextField
@@ -114,6 +152,12 @@ const Inventory = () => {
             {error}
           </Alert>
         )}
+        {updateError && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setUpdateError("")}>
+            {updateError}
+          </Alert>
+        )}
+
         {!loading && filteredProducts.length === 0 && !error && (
           <Typography
             variant="body1"
@@ -122,6 +166,7 @@ const Inventory = () => {
             No products found in inventory or matching your search.
           </Typography>
         )}
+
         {!loading && filteredProducts.length > 0 && (
           <TableContainer>
             <Table>
@@ -159,11 +204,49 @@ const Inventory = () => {
                       <TableCell>Ksh {product.price.toFixed(2)}</TableCell>
                       <TableCell
                         sx={{
-                          color: product.stock < 10 ? "#E53935" : "inherit",
-                          fontWeight: product.stock < 10 ? "bold" : "normal",
+                          cursor: "pointer",
+                          "&:hover": { backgroundColor: "#f5f5f5" },
                         }}
+                        onClick={() =>
+                          editingProductId !== product.id && handleEditClick(product)
+                        }
                       >
-                        {product.stock}
+                        {editingProductId === product.id ? (
+                          <Box sx={{ display: "flex", alignItems: "center" }}>
+                            <TextField
+                              type="number"
+                              value={editingStock}
+                              onChange={(e) => setEditingStock(e.target.value)}
+                              size="small"
+                              autoFocus
+                              sx={{ width: "80px", mr: 1 }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSaveStock(product.id);
+                                if (e.key === "Escape") handleCancelEdit();
+                              }}
+                            />
+                            <IconButton
+                              size="small"
+                              onClick={() => handleSaveStock(product.id)}
+                            >
+                              <CheckIcon color="success" />
+                            </IconButton>
+                            <IconButton size="small" onClick={handleCancelEdit}>
+                              <CloseIcon color="error" />
+                            </IconButton>
+                          </Box>
+                        ) : (
+                          <Typography
+                            sx={{
+                              color:
+                                product.stock < 10 ? "#E53935" : "inherit",
+                              fontWeight:
+                                product.stock < 10 ? "bold" : "normal",
+                            }}
+                          >
+                            {product.stock}
+                          </Typography>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Typography

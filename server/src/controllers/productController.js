@@ -1,6 +1,21 @@
 // server/src/controllers/productController.js
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const multer = require("multer");
+const path = require("path");
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, "../../uploads"));
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({ storage });
+
+exports.upload = upload.single("image"); // "image" must match your frontend field name
 
 // Get all products (for Products and Inventory pages)
 exports.getProducts = async (req, res) => {
@@ -42,13 +57,15 @@ exports.getProductById = async (req, res) => {
 // Add a new product (used by AddProductForm.js)
 exports.addProduct = async (req, res) => {
   try {
+    console.log("req.file:", req.file); // Add this line
     if (req.userData.role !== "FARMER") {
       return res
         .status(403)
         .json({ message: "Forbidden: Only farmers can add products." });
     }
 
-    const { name, description, price, stock, imageUrl, categoryId } = req.body;
+    const { name, description, price, stock, categoryId } = req.body;
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!name || !description || !price || stock === undefined || !categoryId) {
       return res
@@ -66,11 +83,23 @@ exports.addProduct = async (req, res) => {
         .json({ message: "Stock must be a non-negative integer." });
     }
 
+    // Parse categoryId as integer
+    const categoryIdInt = parseInt(categoryId);
+    if (isNaN(categoryIdInt)) {
+      return res.status(400).json({ message: "Invalid category ID provided." });
+    }
+
     const categoryExists = await prisma.category.findUnique({
-      where: { id: categoryId },
+      where: { id: categoryIdInt },
     });
     if (!categoryExists) {
       return res.status(400).json({ message: "Invalid category ID provided." });
+    }
+
+    // Parse farmerId as integer
+    const farmerIdInt = parseInt(req.userData.userId);
+    if (isNaN(farmerIdInt)) {
+      return res.status(400).json({ message: "Invalid farmer ID." });
     }
 
     const newProduct = await prisma.product.create({
@@ -80,8 +109,8 @@ exports.addProduct = async (req, res) => {
         price: parseFloat(price),
         stock: parseInt(stock),
         imageUrl: imageUrl || null,
-        categoryId,
-        farmerId: req.userData.userId,
+        categoryId: categoryIdInt,
+        farmerId: farmerIdInt,
       },
     });
     res
@@ -102,19 +131,42 @@ exports.addProduct = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, stock, imageUrl, categoryId } = req.body;
+    const farmerId = parseInt(req.userData.userId, 10);
+
+    const product = await prisma.product.findUnique({ where: { id } });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    if (product.farmerId !== farmerId) {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: You do not own this product." });
+    }
+
+    const { name, description, price, stock, categoryId, removeCurrentImage } =
+      req.body;
+
+    const updateData = {
+      ...(name && { name }),
+      ...(description && { description }),
+      ...(price && { price: parseFloat(price) }),
+      ...(stock && { stock: parseInt(stock) }),
+      ...(categoryId && { categoryId: parseInt(categoryId) }),
+    };
+
+    if (req.file) {
+      updateData.imageUrl = `/uploads/${req.file.filename}`;
+    } else if (removeCurrentImage === "true") {
+      updateData.imageUrl = null;
+    }
 
     const updatedProduct = await prisma.product.update({
       where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(description !== undefined && { description }),
-        ...(price !== undefined && { price: parseFloat(price) }),
-        ...(stock !== undefined && { stock: parseInt(stock) }),
-        ...(imageUrl !== undefined && { imageUrl: imageUrl || null }),
-        ...(categoryId !== undefined && { categoryId }),
-      },
+      data: updateData,
     });
+
     res.json({
       message: "Product updated successfully!",
       product: updatedProduct,
@@ -136,14 +188,25 @@ exports.updateProduct = async (req, res) => {
 // Delete a product
 exports.deleteProduct = async (req, res) => {
   try {
-    if (req.userData.role !== "FARMER" && req.userData.role !== "ADMIN") {
-      return res
-        .status(403)
-        .json({
-          message: "Forbidden: Only farmers or admins can delete products.",
-        });
-    }
     const { id } = req.params;
+    const { role } = req.userData;
+    const userId = parseInt(req.userData.userId, 10);
+
+    const product = await prisma.product.findUnique({
+      where: { id },
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    // Admins can delete any product. Farmers can only delete their own.
+    if (role !== "ADMIN" && product.farmerId !== userId) {
+      return res.status(403).json({
+        message: "Forbidden: You do not have permission to delete this product.",
+      });
+    }
+
     await prisma.product.delete({
       where: { id },
     });
@@ -154,5 +217,63 @@ exports.deleteProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found." });
     }
     res.status(500).json({ message: "Failed to delete product." });
+  }
+};
+
+// Get products for the logged-in farmer
+exports.getMyProducts = async (req, res) => {
+  try {
+    const farmerId = parseInt(req.userData.userId, 10);
+    const products = await prisma.product.findMany({
+      where: { farmerId },
+      include: { category: true },
+      orderBy: { name: "asc" },
+    });
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching farmer's products:", error);
+    res.status(500).json({ message: "Failed to fetch your products." });
+  }
+};
+
+// Update only the stock of a product
+exports.updateStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { stock } = req.body;
+    const farmerId = parseInt(req.userData.userId, 10);
+
+    if (stock === undefined || isNaN(parseInt(stock)) || parseInt(stock) < 0) {
+      return res
+        .status(400)
+        .json({ message: "A valid, non-negative stock quantity is required." });
+    }
+
+    const product = await prisma.product.findUnique({ where: { id } });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    if (product.farmerId !== farmerId) {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: You do not own this product." });
+    }
+
+    const updatedProduct = await prisma.product.update({
+      where: { id },
+      data: {
+        stock: parseInt(stock),
+      },
+    });
+
+    res.json({
+      message: "Stock updated successfully!",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error("Error updating stock:", error);
+    res.status(500).json({ message: "Failed to update stock." });
   }
 };

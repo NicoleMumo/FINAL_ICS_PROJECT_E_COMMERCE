@@ -104,6 +104,7 @@ const DashboardTile = React.memo(
           opacity: isDragging ? 0.5 : 1,
           zIndex: isDragging ? 1000 : "auto",
         }}
+        aria-roledescription="draggable"
       >
         <Paper
           sx={{
@@ -133,12 +134,14 @@ const DashboardTile = React.memo(
                 size="small"
                 sx={{ cursor: "grab", mr: 1 }}
                 aria-label="Drag handle"
+                aria-describedby={`draggable-item-${id}-description`}
               >
                 <DragIndicatorIcon />
               </IconButton>
               <Typography
                 variant="h6"
                 sx={{ fontWeight: "bold", color: "#212121" }}
+                id={`draggable-item-${id}-description`}
               >
                 {title}
               </Typography>
@@ -177,16 +180,11 @@ const Dashboard = () => {
 
   // State for dashboard data
   const [dashboardData, setDashboardData] = useState({
-    totalProducts: 0,
-    pendingOrders: 0,
-    monthlySales: 0,
-    lowStockItems: 0,
+    summaryData: {},
+    recentProducts: [],
+    recentOrders: [],
+    topSellingProducts: [],
   });
-
-  // State for lists
-  const [productListings, setProductListings] = useState([]);
-  const [incomingOrders, setIncomingOrders] = useState([]);
-  const [topSellingProducts, setTopSellingProducts] = useState([]);
 
   // State for loading and error
   const [loading, setLoading] = useState(true);
@@ -218,57 +216,28 @@ const Dashboard = () => {
   };
 
   // --- Data Fetching Effect ---
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`${API_BASE_URL}/api/dashboard`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDashboardData(response.data);
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+      setError(
+        "Failed to load dashboard data. Please check your connection and try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const token = localStorage.getItem("token");
-
-        // Fetch dashboard summary
-        const summaryResponse = await axios.get(
-          `${API_BASE_URL}/api/farmer/dashboard/summary`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setDashboardData(summaryResponse.data);
-
-        // Fetch recent product listings (assuming a general products API)
-        const productsResponse = await axios.get(
-          `${API_BASE_URL}/api/products?limit=5&sortBy=createdAt&order=desc`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setProductListings(productsResponse.data);
-
-        // Fetch recent incoming orders
-        const ordersResponse = await axios.get(
-          `${API_BASE_URL}/api/farmer/dashboard/recent-orders`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setIncomingOrders(ordersResponse.data);
-
-        // Fetch top selling products
-        const topSellingResponse = await axios.get(
-          `${API_BASE_URL}/api/farmer/dashboard/top-selling`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setTopSellingProducts(topSellingResponse.data);
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-        setError("Failed to load dashboard data. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchDashboardData();
-  }, []); // Empty dependency array means this runs once on mount
+  }, [fetchDashboardData]); // Dependency array should include fetchDashboardData since it's a useCallback
 
   // --- DND Kit Handlers ---
   const handleDragEnd = useCallback((event) => {
@@ -294,479 +263,348 @@ const Dashboard = () => {
   }, []);
 
   // --- Action Handlers ---
-  const handleViewAllProducts = () => navigate("/farmer/products");
-  const handleAddProduct = () => navigate("/farmer/products/add");
-  const handleEditProduct = (productId) =>
-    navigate(`/farmer/products/edit/${productId}`);
+  const handleViewAllProducts = useCallback(
+    () => navigate("/farmer/products"),
+    [navigate]
+  );
+  const handleAddProduct = useCallback(
+    () => navigate("/farmer/products/add"),
+    [navigate]
+  );
+  const handleEditProduct = useCallback(
+    (productId) => navigate(`/farmer/products/edit/${productId}`),
+    [navigate]
+  );
+  const handleViewAllOrders = useCallback(
+    () => navigate("/farmer/orders"),
+    [navigate]
+  );
+  const handleContactBuyer = useCallback((userId) => {
+    // In a real app, this would open a chat or email interface
+    alert(`Contacting buyer with ID: ${userId}`);
+  }, []);
 
-  const handleDeleteProduct = async (productId) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      try {
-        const token = localStorage.getItem("token");
-        await axios.delete(`${API_BASE_URL}/api/products/${productId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setProductListings(productListings.filter((p) => p.id !== productId));
-        setDashboardData((prev) => ({
-          ...prev,
-          totalProducts: prev.totalProducts - 1,
-        }));
-        alert("Product deleted successfully!");
-      } catch (err) {
-        console.error("Error deleting product:", err);
-        setError("Failed to delete product.");
-      }
-    }
-  };
-
-  const handleViewAllOrders = () => navigate("/farmer/orders");
-
-  const handleUpdateOrderStatus = async (orderId, currentStatus) => {
-    let newStatus;
-    if (currentStatus === "PENDING") {
-      newStatus = "PROCESSING";
-    } else if (currentStatus === "PROCESSING") {
-      newStatus = "SHIPPED";
-    } else {
-      alert(
-        `Order is already ${currentStatus}. No further action can be taken from dashboard.`
-      );
-      return;
-    }
-
-    if (
-      window.confirm(
-        `Are you sure you want to mark order ${orderId.substring(
-          0,
-          8
-        )}... as ${newStatus}?`
-      )
-    ) {
-      try {
-        const token = localStorage.getItem("token");
-        await axios.patch(
-          `${API_BASE_URL}/api/orders/${orderId}/status`,
-          { status: newStatus },
-          {
+  const handleDeleteProduct = useCallback(
+    async (productId) => {
+      if (window.confirm("Are you sure you want to delete this product?")) {
+        try {
+          const token = localStorage.getItem("token");
+          await axios.delete(`${API_BASE_URL}/api/products/${productId}`, {
             headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setIncomingOrders((prevOrders) =>
-          prevOrders.map((order) =>
-            order.id === orderId ? { ...order, status: newStatus } : order
-          )
-        );
-        const summaryResponse = await axios.get(
-          `${API_BASE_URL}/api/farmer/dashboard/summary`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setDashboardData(summaryResponse.data);
-        alert(
-          `Order ${orderId.substring(0, 8)}... status updated to ${newStatus}.`
-        );
-      } catch (err) {
-        console.error("Error updating order status:", err);
-        setError("Failed to update order status.");
+          });
+          alert("Product deleted successfully!");
+          fetchDashboardData(); // Re-fetch data to ensure consistency
+        } catch (err) {
+          console.error("Failed to delete product:", err);
+          alert("Failed to delete product. Please try again.");
+        }
       }
-    }
-  };
+    },
+    [fetchDashboardData]
+  );
 
-  const handleContactBuyer = (userId) => {
-    console.log("Contact buyer for user ID:", userId);
-    alert("Contact buyer feature is not yet implemented.");
-  };
+  const handleUpdateOrderStatus = useCallback(
+    async (orderId, currentStatus) => {
+      const newStatus =
+        currentStatus === "PENDING"
+          ? "PROCESSING"
+          : currentStatus === "PROCESSING"
+          ? "SHIPPED"
+          : currentStatus === "SHIPPED" // Added for COMPLETED
+          ? "DELIVERED"
+          : currentStatus; // Fallback for already delivered or other states
+
+      if (
+        window.confirm(
+          `Are you sure you want to update order status to ${newStatus}?`
+        )
+      ) {
+        try {
+          const token = localStorage.getItem("token");
+          await axios.patch(
+            `${API_BASE_URL}/api/orders/${orderId}/status`,
+            { status: newStatus },
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          alert(
+            `Order ${orderId.substring(
+              0,
+              8
+            )}... status updated to ${newStatus}.`
+          );
+          fetchDashboardData(); // Re-fetch data to ensure consistency
+        } catch (err) {
+          console.error("Failed to update order status:", err);
+          alert("Failed to update order status. Please try again.");
+        }
+      }
+    },
+    [fetchDashboardData]
+  );
 
   // --- Render Functions for Each Tile Content ---
   const renderTileContent = useCallback(
     (tileId) => {
+      const { summaryData, recentProducts, recentOrders, topSellingProducts } =
+        dashboardData;
+
       switch (tileId) {
         case "summaryCards":
           return (
-            <Grid container spacing={2}>
-              {" "}
-              {/* Inner grid for summary cards */}
-              <Grid
-                item
-                xs={12}
-                sm={6}
-                md={
-                  DEFAULT_TILE_CONFIG.find((c) => c.id === "summaryCards")?.span
-                    ? (12 /
-                        DEFAULT_TILE_CONFIG.find((c) => c.id === "summaryCards")
-                          .span) *
-                      3
-                    : 3
-                }
-              >
-                <Box
+            <Grid container spacing={3}>
+              {/* Total Products */}
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper
                   sx={{
-                    p: 1,
-                    backgroundColor: "#F0F0F0",
-                    borderRadius: 1,
-                    height: "100%",
+                    p: 2,
+                    textAlign: "center",
+                    backgroundColor: "#E3F2FD",
                   }}
                 >
-                  <Typography variant="subtitle2" sx={{ color: "#424242" }}>
+                  <Typography variant="subtitle1" color="text.secondary">
                     Total Products
                   </Typography>
                   <Typography
                     variant="h5"
                     sx={{ fontWeight: "bold", color: "#4CAF50" }}
                   >
-                    {dashboardData.totalProducts}
+                    {summaryData.totalProducts}
                   </Typography>
                   <Button
                     size="small"
-                    onClick={handleViewAllProducts}
-                    startIcon={<VisibilityIcon />}
+                    onClick={() => navigate("/farmer/products")}
                   >
-                    View
+                    Manage
                   </Button>
-                </Box>
+                </Paper>
               </Grid>
-              <Grid
-                item
-                xs={12}
-                sm={6}
-                md={
-                  DEFAULT_TILE_CONFIG.find((c) => c.id === "summaryCards")?.span
-                    ? (12 /
-                        DEFAULT_TILE_CONFIG.find((c) => c.id === "summaryCards")
-                          .span) *
-                      3
-                    : 3
-                }
-              >
-                <Box
-                  sx={{
-                    p: 1,
-                    backgroundColor: "#F0F0F0",
-                    borderRadius: 1,
-                    height: "100%",
-                  }}
+
+              {/* Pending Orders */}
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper
+                  sx={{ p: 2, textAlign: "center", backgroundColor: "#FFEBEE" }}
                 >
-                  <Typography variant="subtitle2" sx={{ color: "#424242" }}>
+                  <Typography variant="subtitle1" color="text.secondary">
                     Pending Orders
                   </Typography>
                   <Typography
                     variant="h5"
                     sx={{ fontWeight: "bold", color: "#E53935" }}
                   >
-                    {dashboardData.pendingOrders}
+                    {summaryData.pendingOrders}
                   </Typography>
                   <Button
                     size="small"
-                    onClick={handleViewAllOrders}
-                    startIcon={<VisibilityIcon />}
+                    onClick={() => navigate("/farmer/orders")}
                   >
                     View
                   </Button>
-                </Box>
+                </Paper>
               </Grid>
-              <Grid
-                item
-                xs={12}
-                sm={6}
-                md={
-                  DEFAULT_TILE_CONFIG.find((c) => c.id === "summaryCards")?.span
-                    ? (12 /
-                        DEFAULT_TILE_CONFIG.find((c) => c.id === "summaryCards")
-                          .span) *
-                      3
-                    : 3
-                }
-              >
-                <Box
-                  sx={{
-                    p: 1,
-                    backgroundColor: "#F0F0F0",
-                    borderRadius: 1,
-                    height: "100%",
-                  }}
+
+              {/* Monthly Sales */}
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper
+                  sx={{ p: 2, textAlign: "center", backgroundColor: "#E8F5E9" }}
                 >
-                  <Typography variant="subtitle2" sx={{ color: "#424242" }}>
-                    Monthly Sales
+                  <Typography variant="subtitle1" color="text.secondary">
+                    This Month's Sales
                   </Typography>
                   <Typography
                     variant="h5"
                     sx={{ fontWeight: "bold", color: "#4CAF50" }}
                   >
-                    Ksh {dashboardData.monthlySales.toFixed(2)}
+                    Ksh {summaryData.monthlySales?.toFixed(2) || "0.00"}
                   </Typography>
                   <Button
                     size="small"
                     onClick={() => navigate("/farmer/analytics")}
-                    startIcon={<AnalyticsIcon />}
                   >
-                    View
+                    Details
                   </Button>
-                </Box>
+                </Paper>
               </Grid>
-              <Grid
-                item
-                xs={12}
-                sm={6}
-                md={
-                  DEFAULT_TILE_CONFIG.find((c) => c.id === "summaryCards")?.span
-                    ? (12 /
-                        DEFAULT_TILE_CONFIG.find((c) => c.id === "summaryCards")
-                          .span) *
-                      3
-                    : 3
-                }
-              >
-                <Box
-                  sx={{
-                    p: 1,
-                    backgroundColor: "#F0F0F0",
-                    borderRadius: 1,
-                    height: "100%",
-                  }}
+
+              {/* Low Stock Items */}
+              <Grid item xs={12} sm={6} md={3}>
+                <Paper
+                  sx={{ p: 2, textAlign: "center", backgroundColor: "#FFF3E0" }}
                 >
-                  <Typography variant="subtitle2" sx={{ color: "#424242" }}>
+                  <Typography variant="subtitle1" color="text.secondary">
                     Low Stock Items
                   </Typography>
                   <Typography
                     variant="h5"
                     sx={{ fontWeight: "bold", color: "#E53935" }}
                   >
-                    {dashboardData.lowStockItems}
+                    {summaryData.lowStockItems}
                   </Typography>
                   <Button
                     size="small"
                     onClick={() => navigate("/farmer/inventory")}
-                    startIcon={<WarningAmberIcon />}
                   >
-                    View
+                    Check
                   </Button>
-                </Box>
+                </Paper>
               </Grid>
             </Grid>
           );
 
         case "recentProducts":
           return (
-            <Box>
-              {productListings.length > 0 ? (
-                productListings.map((product) => (
-                  <Box
-                    key={product.id}
+            <List>
+              {recentProducts.length > 0 ? (
+                recentProducts.map((product, index) => (
+                  <ListItem
+                    key={product.id || index} // Prefer product.id for key
                     sx={{
                       display: "flex",
-                      alignItems: "center",
-                      mb: 2,
-                      p: 2,
-                      border: "1px solid #E0E0E0",
-                      borderRadius: 1,
-                      "&:last-child": { mb: 0 },
+                      justifyContent: "space-between",
+                      py: 1,
+                      borderBottom: "1px solid #f0f0f0",
                     }}
                   >
-                    <Avatar
-                      src={
-                        product.imageUrl
-                          ? `${API_BASE_URL}${product.imageUrl}`
-                          : "https://via.placeholder.com/50?text=No+Img"
-                      }
-                      alt={product.name}
-                      variant="rounded"
-                      sx={{ width: 60, height: 60, mr: 2 }}
-                    />
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{ fontWeight: "bold", color: "#212121" }}
-                      >
-                        {product.name}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: "#212121" }}>
-                        Ksh {product.price ? product.price.toFixed(2) : "N/A"} /{" "}
-                        {product.unit || "unit"}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: product.stock < 10 ? "#E53935" : "#212121",
-                        }}
-                      >
-                        In Stock: {product.stock || 0} {product.unit || "units"}
-                      </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <Avatar
+                        src={
+                          `${API_BASE_URL}${product.imageUrl}` ||
+                          "/path/to/default-image.png"
+                        }
+                        alt={product.name}
+                        sx={{ width: 40, height: 40, mr: 2 }}
+                      />
+                      <Box>
+                        <Typography
+                          variant="body1"
+                          sx={{ fontWeight: "bold", color: "#212121" }}
+                        >
+                          {product.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Stock: {product.stock}
+                        </Typography>
+                      </Box>
                     </Box>
-                    <IconButton
-                      size="small"
-                      sx={{ mr: 1 }}
-                      onClick={() => handleEditProduct(product.id)}
-                      aria-label={`Edit ${product.name}`}
-                    >
-                      <EditIcon sx={{ color: "#0288D1" }} />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDeleteProduct(product.id)}
-                      aria-label={`Delete ${product.name}`}
-                    >
-                      <DeleteIcon sx={{ color: "#E53935" }} />
-                    </IconButton>
-                  </Box>
+                    <Box>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEditProduct(product.id)}
+                        aria-label="Edit product"
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteProduct(product.id)}
+                        aria-label="Delete product"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
+                  </ListItem>
                 ))
               ) : (
                 <Box sx={{ textAlign: "center", py: 4 }}>
-                  <Typography variant="body2" color="text.secondary" mb={2}>
-                    No recent products found.
+                  <Typography variant="body2" color="text.secondary">
+                    No recent products listed.
                   </Typography>
                   <Button
-                    variant="contained"
+                    variant="outlined"
                     startIcon={<AddIcon />}
+                    sx={{ mt: 2 }}
                     onClick={handleAddProduct}
                   >
                     Add Product
                   </Button>
                 </Box>
               )}
-            </Box>
+              <Box sx={{ textAlign: "center", mt: 2 }}>
+                <Button size="small" onClick={handleViewAllProducts}>
+                  View All Products
+                </Button>
+              </Box>
+            </List>
           );
 
         case "recentOrders":
           return (
-            <Box>
-              {incomingOrders.length > 0 ? (
-                incomingOrders.map((order) => (
-                  <Box
-                    key={order.id}
+            <List>
+              {recentOrders.length > 0 ? (
+                recentOrders.map((order, index) => (
+                  <ListItem
+                    key={order.id || index} // Prefer order.id for key
                     sx={{
                       display: "flex",
                       flexDirection: "column",
-                      mb: 2,
-                      p: 2,
-                      border: "1px solid #E0E0E0",
-                      borderRadius: 1,
-                      "&:last-child": { mb: 0 },
+                      alignItems: "flex-start",
+                      py: 1,
+                      borderBottom: "1px solid #f0f0f0",
                     }}
                   >
                     <Box
                       sx={{
                         display: "flex",
                         justifyContent: "space-between",
-                        alignItems: "center",
+                        width: "100%",
                         mb: 1,
                       }}
                     >
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
-                        <Avatar
-                          src={`https://via.placeholder.com/40?text=${
-                            order.user?.name ? order.user.name.charAt(0) : "?"
-                          }`}
-                          alt={order.user?.name || "Customer"}
-                          sx={{ width: 40, height: 40, mr: 1 }}
-                        />
-                        <Typography
-                          variant="subtitle1"
-                          sx={{ fontWeight: "bold", color: "#212121" }}
-                        >
-                          {order.user?.name || "Customer"}
-                        </Typography>
-                      </Box>
+                      <Typography variant="body1" sx={{ fontWeight: "bold" }}>
+                        Order #{order.id?.substring(0, 8)}...
+                      </Typography>
                       <Chip
                         label={order.status}
                         color={statusColors[order.status] || "default"}
                         size="small"
                       />
                     </Box>
-                    <Typography
-                      variant="body2"
-                      sx={{ color: "#212121", mb: 0.5 }}
-                    >
-                      {order.orderItems.length > 0
-                        ? `${order.orderItems[0].quantity} x ${
-                            order.orderItems[0].product?.name ||
-                            "Unknown Product"
-                          }${
-                            order.orderItems.length > 1
-                              ? ` (+${order.orderItems.length - 1} more)`
-                              : ""
-                          }`
-                        : "No items"}
-                      - Ksh {order.total ? order.total.toFixed(2) : "0.00"}
+                    <Typography variant="body2" color="text.secondary">
+                      Buyer: {order.user?.username || "N/A"}
                     </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{ color: "#212121", fontSize: "0.8rem" }}
-                    >
-                      Ordered on{" "}
-                      {new Date(order.createdAt).toLocaleDateString("en-KE", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                    <Typography variant="body2" color="text.secondary">
+                      Total: Ksh {order.totalAmount?.toFixed(2) || "0.00"}
                     </Typography>
-                    <Box sx={{ mt: 2 }}>
-                      {order.status === "PENDING" ? (
-                        <Button
-                          variant="contained"
-                          size="small"
-                          sx={{
-                            bgcolor: "#4CAF50",
-                            "&:hover": { bgcolor: "#388E3C" },
-                            mr: 1,
-                          }}
-                          onClick={() =>
-                            handleUpdateOrderStatus(order.id, "PENDING")
-                          }
-                        >
-                          Mark Prepared
-                        </Button>
-                      ) : order.status === "PROCESSING" ? (
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={<DispatchIcon />}
-                          sx={{
-                            bgcolor: "#0288D1",
-                            "&:hover": { bgcolor: "#0277BD" },
-                            mr: 1,
-                          }}
-                          onClick={() =>
-                            handleUpdateOrderStatus(order.id, "PROCESSING")
-                          }
-                        >
-                          Dispatch
-                        </Button>
-                      ) : (
-                        <Chip
-                          label={order.status}
-                          color={statusColors[order.status]}
-                          size="small"
-                        />
-                      )}
+                    <Box sx={{ mt: 1, display: "flex", gap: 1 }}>
                       <Button
-                        variant="outlined"
                         size="small"
+                        variant="outlined"
+                        startIcon={<DispatchIcon />}
+                        onClick={() =>
+                          handleUpdateOrderStatus(order.id, order.status)
+                        }
+                        disabled={order.status === "DELIVERED"}
+                      >
+                        Update Status
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
                         startIcon={<MailIcon />}
-                        sx={{
-                          color: "#0288D1",
-                          borderColor: "#0288D1",
-                          "&:hover": {
-                            borderColor: "#0277BD",
-                            color: "#0277BD",
-                          },
-                        }}
                         onClick={() => handleContactBuyer(order.user?.id)}
                         disabled={!order.user?.id}
                       >
                         Contact Buyer
                       </Button>
                     </Box>
-                  </Box>
+                  </ListItem>
                 ))
               ) : (
                 <Box sx={{ textAlign: "center", py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
                     No recent incoming orders.
                   </Typography>
+                  <Button
+                    variant="outlined"
+                    sx={{ mt: 2 }}
+                    onClick={handleViewAllOrders}
+                  >
+                    View All Orders
+                  </Button>
                 </Box>
               )}
-            </Box>
+            </List>
           );
 
         case "salesAnalytics":
@@ -793,7 +631,7 @@ const Dashboard = () => {
               {topSellingProducts.length > 0 ? (
                 topSellingProducts.map((product, index) => (
                   <ListItem
-                    key={index}
+                    key={product.id || index} // Prefer product.id for key
                     sx={{
                       display: "flex",
                       justifyContent: "space-between",
@@ -826,10 +664,7 @@ const Dashboard = () => {
       }
     },
     [
-      dashboardData,
-      productListings,
-      incomingOrders,
-      topSellingProducts,
+      dashboardData, // Sufficient for all data access within the render function
       handleEditProduct,
       handleDeleteProduct,
       handleUpdateOrderStatus,
@@ -916,9 +751,10 @@ const SortableDashboardTile = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    gridColumn: `span ${
-      DEFAULT_TILE_CONFIG.find((config) => config.id === tile.id)?.span || 6
-    }`,
+    // The `md` prop on Grid item in DashboardTile should handle column span.
+    // This `gridColumn` style might be redundant or for specific DND kit layout overrides.
+    // If needed, use tile.span directly:
+    // gridColumn: `span ${tile.span || 6}`,
   };
 
   return (

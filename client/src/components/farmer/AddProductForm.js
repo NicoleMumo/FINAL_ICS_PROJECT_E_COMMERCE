@@ -127,7 +127,7 @@ const AddProductForm = () => {
     formData.append("stock", parseInt(stock));
     formData.append("categoryId", selectedCategory);
     if (productImage) {
-      formData.append("productImage", productImage);
+      formData.append("image", productImage);
     }
 
     try {

@@ -7,6 +7,8 @@ const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const analyticsRoutes = require("./routes/analyticsRoutes");
+const path = require("path");
 
 // If your .env is in 'server/' and index.js is in 'server/src/',
 // you need to go one level up to find the .env file.
@@ -18,6 +20,9 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from uploads
+app.use("/uploads", express.static(path.join(__dirname, "../uploads"))); // serve from server/uploads
+
 // Auth routes (publicly accessible for login/register)
 app.use("/api/auth", authRoutes);
 
@@ -27,6 +32,7 @@ app.use("/api", productRoutes);
 app.use("/api", orderRoutes);
 app.use("/api", categoryRoutes);
 app.use("/api", dashboardRoutes);
+app.use("/api", analyticsRoutes);
 
 app.get("/", (req, res) => {
   res.send("FarmDirect Backend API is running!");
