@@ -10,6 +10,6 @@ router.get(
   dashboardController.getDashboardData
 );
 
-router.get('/this-month-sales', authMiddleware, dashboardController.getThisMonthSales);
+
 
 module.exports = router;

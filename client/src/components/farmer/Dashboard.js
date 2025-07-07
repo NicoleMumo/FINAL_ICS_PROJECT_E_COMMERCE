@@ -180,7 +180,11 @@ const Dashboard = () => {
 
   // State for dashboard data
   const [dashboardData, setDashboardData] = useState({
-    summaryData: {},
+    summaryData: {
+      totalProducts: 0,
+      pendingOrders: 0,
+      lowStockItems: 0,
+    },
     recentProducts: [],
     recentOrders: [],
     topSellingProducts: [],
@@ -354,100 +358,123 @@ const Dashboard = () => {
         case "summaryCards":
           return (
             <Grid container spacing={3}>
-              {/* Total Products */}
-              <Grid item xs={12} sm={6} md={3}>
-                <Paper
-                  sx={{
-                    p: 2,
-                    textAlign: "center",
-                    backgroundColor: "#E3F2FD",
-                  }}
-                >
-                  <Typography variant="subtitle1" color="text.secondary">
-                    Total Products
-                  </Typography>
-                  <Typography
-                    variant="h5"
-                    sx={{ fontWeight: "bold", color: "#4CAF50" }}
+              {/* Summary Cards */}
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                {/* Total Products */}
+                <Grid item xs={12} sm={6} md={4}>
+                  <Paper
+                    sx={{
+                      p: 3,
+                      textAlign: "center",
+                      backgroundColor: "#f5f5f5",
+                      borderRadius: 2,
+                      boxShadow: 1,
+                    }}
                   >
-                    {summaryData.totalProducts}
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => navigate("/farmer/products")}
-                  >
-                    Manage
-                  </Button>
-                </Paper>
-              </Grid>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Total Products
+                    </Typography>
+                    <Typography
+                      variant="h4"
+                      sx={{ 
+                        fontWeight: "bold", 
+                        color: "primary.main",
+                        mb: 1 
+                      }}
+                    >
+                      {summaryData.totalProducts}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => navigate("/farmer/products")}
+                      sx={{
+                        textTransform: "none",
+                        borderRadius: 2,
+                      }}
+                    >
+                      Manage Products
+                    </Button>
+                  </Paper>
+                </Grid>
 
-              {/* Pending Orders */}
-              <Grid item xs={12} sm={6} md={3}>
-                <Paper
-                  sx={{ p: 2, textAlign: "center", backgroundColor: "#FFEBEE" }}
-                >
-                  <Typography variant="subtitle1" color="text.secondary">
-                    Pending Orders
-                  </Typography>
-                  <Typography
-                    variant="h5"
-                    sx={{ fontWeight: "bold", color: "#E53935" }}
+                {/* Pending Orders */}
+                <Grid item xs={12} sm={6} md={4}>
+                  <Paper
+                    sx={{
+                      p: 3,
+                      textAlign: "center",
+                      backgroundColor: "#f5f5f5",
+                      borderRadius: 2,
+                      boxShadow: 1,
+                    }}
                   >
-                    {summaryData.pendingOrders}
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => navigate("/farmer/orders")}
-                  >
-                    View
-                  </Button>
-                </Paper>
-              </Grid>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Pending Orders
+                    </Typography>
+                    <Typography
+                      variant="h4"
+                      sx={{ 
+                        fontWeight: "bold", 
+                        color: "warning.main",
+                        mb: 1 
+                      }}
+                    >
+                      {summaryData.pendingOrders}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      size="small"
+                      onClick={() => navigate("/farmer/orders")}
+                      sx={{
+                        textTransform: "none",
+                        borderRadius: 2,
+                      }}
+                    >
+                      View Orders
+                    </Button>
+                  </Paper>
+                </Grid>
 
-              {/* Monthly Sales */}
-              <Grid item xs={12} sm={6} md={3}>
-                <Paper
-                  sx={{ p: 2, textAlign: "center", backgroundColor: "#E8F5E9" }}
-                >
-                  <Typography variant="subtitle1" color="text.secondary">
-                    This Month's Sales
-                  </Typography>
-                  <Typography
-                    variant="h5"
-                    sx={{ fontWeight: "bold", color: "#4CAF50" }}
+                {/* Low Stock Items */}
+                <Grid item xs={12} sm={6} md={4}>
+                  <Paper
+                    sx={{
+                      p: 3,
+                      textAlign: "center",
+                      backgroundColor: "#f5f5f5",
+                      borderRadius: 2,
+                      boxShadow: 1,
+                    }}
                   >
-                    Ksh {summaryData.monthlySales?.toFixed(2) || "0.00"}
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => navigate("/farmer/analytics")}
-                  >
-                    Details
-                  </Button>
-                </Paper>
-              </Grid>
-
-              {/* Low Stock Items */}
-              <Grid item xs={12} sm={6} md={3}>
-                <Paper
-                  sx={{ p: 2, textAlign: "center", backgroundColor: "#FFF3E0" }}
-                >
-                  <Typography variant="subtitle1" color="text.secondary">
-                    Low Stock Items
-                  </Typography>
-                  <Typography
-                    variant="h5"
-                    sx={{ fontWeight: "bold", color: "#E53935" }}
-                  >
-                    {summaryData.lowStockItems}
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => navigate("/farmer/inventory")}
-                  >
-                    Check
-                  </Button>
-                </Paper>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Low Stock Items
+                    </Typography>
+                    <Typography
+                      variant="h4"
+                      sx={{ 
+                        fontWeight: "bold", 
+                        color: "error.main",
+                        mb: 1 
+                      }}
+                    >
+                      {summaryData.lowStockItems}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      size="small"
+                      onClick={() => navigate("/farmer/inventory")}
+                      sx={{
+                        textTransform: "none",
+                        borderRadius: 2,
+                      }}
+                    >
+                      Check Inventory
+                    </Button>
+                  </Paper>
+                </Grid>
               </Grid>
             </Grid>
           );
