@@ -1,4 +1,159 @@
-// server/src/controllers/orderController.js
+// IMPORTANT: Add these to your .env file
+// PESAPAL_CONSUMER_KEY=your_pesapal_consumer_key
+// PESAPAL_CONSUMER_SECRET=your_pesapal_consumer_secret
+// PESAPAL_IPN_NOTIFICATION_ID=your_pesapal_ipn_id
+
+const PESAPAL_CONSUMER_KEY = process.env.PESAPAL_CONSUMER_KEY;
+const PESAPAL_CONSUMER_SECRET = process.env.PESAPAL_CONSUMER_SECRET;
+// Use the sandbox URL for testing and production URL for live transactions
+const PESAPAL_API_URL = process.env.NODE_ENV === 'production' 
+    ? 'https://pay.pesapal.com/v3' 
+    : 'https://cybqa.pesapal.com/pesapalv3';
+
+// Function to get a new Pesapal access token
+const getAccessToken = async () => {
+    try {
+        const response = await axios.post(`${PESAPAL_API_URL}/api/Auth/RequestToken`, {
+            consumer_key: PESAPAL_CONSUMER_KEY,
+            consumer_secret: PESAPAL_CONSUMER_SECRET,
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        });
+        return response.data.token;
+    } catch (error) {
+        console.error('Error getting Pesapal access token:', error.response ? error.response.data : error.message);
+        throw new Error('Could not authenticate with Pesapal.');
+    }
+};
+
+// 1. Initiate Payment Request
+exports.initiatePesapalPayment = async (req, res) => {
+    const { amount, currency, description, items, billing_address } = req.body;
+    const { userId, email, phone_number } = req.user; // Assuming user is authenticated
+
+    if (!amount || !currency || !description || !items || !billing_address) {
+        return res.status(400).json({ error: 'Missing required payment details.' });
+    }
+
+    try {
+        const token = await getAccessToken();
+        const merchant_reference = `ORDER_${Date.now()}`;
+        const notification_id = process.env.PESAPAL_IPN_NOTIFICATION_ID; // Get this from your Pesapal dashboard
+
+        const orderData = {
+            id: merchant_reference,
+            currency,
+            amount,
+            description,
+            callback_url: 'http://localhost:3000/payment-callback', // Your frontend callback URL
+            notification_id,
+            billing_address: {
+                ...billing_address,
+                email_address: email,
+                phone_number: phone_number
+            }
+        };
+
+        const response = await axios.post(`${PESAPAL_API_URL}/api/Transactions/SubmitOrderRequest`, orderData, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        });
+
+        if (response.data.error) {
+             return res.status(400).json({ error: response.data.error.message });
+        }
+
+        await prisma.order.create({
+            data: {
+                id: merchant_reference,
+                userId: userId,
+                amount: parseFloat(amount),
+                status: 'PENDING',
+                pesapalTrackingId: response.data.order_tracking_id,
+                items: {
+                    create: items.map(item => ({
+                        productId: item.id,
+                        quantity: item.quantity,
+                    }))
+                }
+            }
+        });
+        res.status(200).json(response.data);
+
+    } catch (error) {
+        console.error('Error initiating Pesapal payment:', error.response ? error.response.data : error.message);
+        res.status(500).json({ error: 'Failed to initiate payment.' });
+    }
+};
+
+// 2. Handle Instant Payment Notification (IPN)
+exports.handlePesapalIPN = async (req, res) => {
+    const { OrderTrackingId, OrderMerchantReference, OrderNotificationType } = req.body;
+    console.log('Received IPN:', req.body);
+
+    if (OrderNotificationType === 'IPNCHANGE') {
+        try {
+            const token = await getAccessToken();
+            const statusResponse = await axios.get(`${PESAPAL_API_URL}/api/Transactions/GetTransactionStatus?orderTrackingId=${OrderTrackingId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+
+            const { payment_status_description } = statusResponse.data;
+
+            if (payment_status_description === 'Completed') {
+                const order = await prisma.order.findUnique({ 
+                    where: { id: OrderMerchantReference },
+                    include: { items: true }
+                });
+
+                if (order && order.status !== 'COMPLETED') {
+                    await prisma.$transaction(async (tx) => {
+                        await tx.order.update({
+                            where: { id: OrderMerchantReference },
+                            data: { status: 'COMPLETED' },
+                        });
+
+                        for (const item of order.items) {
+                            const product = await tx.product.findUnique({ where: { id: item.productId }});
+                            if (!product) continue;
+
+                            await tx.product.update({
+                                where: { id: item.productId },
+                                data: { stock: { decrement: item.quantity } },
+                            });
+
+                            await tx.user.update({
+                                where: { id: product.farmerId },
+                                data: { balance: { increment: item.quantity * product.price } } 
+                            });
+                        }
+                    });
+                    console.log(`Order ${OrderMerchantReference} successfully processed.`);
+                }
+            }
+
+            const responseText = `pesapal_notification_type=${OrderNotificationType}&pesapal_transaction_tracking_id=${OrderTrackingId}&pesapal_merchant_reference=${OrderMerchantReference}`;
+            res.status(200).send(responseText);
+
+        } catch (error) {
+            console.error('Error processing IPN:', error.response ? error.response.data : error.message);
+            res.status(500).send('Error processing IPN');
+        }
+    } else {
+        res.status(200).send('Acknowledged');
+    }
+};
+
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { getPesapalToken, submitPesapalOrder } = require('../utils/pesapal');

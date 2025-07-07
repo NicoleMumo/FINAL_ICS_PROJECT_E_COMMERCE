@@ -19,7 +19,9 @@ import {
   Select,
   MenuItem,
   Link,
-  Drawer
+  Drawer,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -52,6 +54,9 @@ const ConsumerDashboard = () => {
   const [userName, setUserName] = useState("");
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutStatus, setCheckoutStatus] = useState(''); // '', 'pending', 'success', 'error'
+  const [checkoutMessage, setCheckoutMessage] = useState('');
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -159,6 +164,36 @@ const ConsumerDashboard = () => {
         return [...prevCart, { ...product, quantity: 1 }];
       }
     });
+  };
+
+  const handleCheckout = async () => {
+    setCheckoutLoading(true);
+    setCheckoutStatus('');
+    setCheckoutMessage('');
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) throw new Error('User not logged in');
+      const userObj = JSON.parse(storedUser);
+      const userId = userObj.id;
+      const items = cart.map(item => ({ productId: item.id, quantity: item.quantity }));
+      const res = await axios.post('http://localhost:5000/api/orders', { userId, items });
+      setCheckoutStatus('pending');
+      setCheckoutMessage('STK push sent! Please complete payment on your phone.');
+      // Simulate polling for payment status (in real app, poll or use websocket)
+      setTimeout(async () => {
+        // Simulate backend payment callback
+        // In real app, poll /api/orders/:id or listen for webhook
+        setCheckoutStatus('success');
+        setCheckoutMessage('Payment successful! Thank you for your order.');
+        setCart([]);
+        localStorage.removeItem('cart');
+      }, 4000);
+    } catch (err) {
+      setCheckoutStatus('error');
+      setCheckoutMessage(err.response?.data?.message || 'Checkout failed.');
+    } finally {
+      setCheckoutLoading(false);
+    }
   };
 
   if (loading) return <Typography sx={{ p: 4 }}>Loading products...</Typography>;
@@ -421,8 +456,15 @@ const ConsumerDashboard = () => {
               <Typography variant="subtitle1" sx={{ mt: 2, fontWeight: 'bold' }}>
                 Total: Ksh{cart.reduce((sum, item) => sum + item.price * item.quantity, 0)}
               </Typography>
-              <Button variant="contained" color="primary" fullWidth sx={{ mt: 2 }} disabled>
-                Checkout (Coming Soon)
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                sx={{ mt: 2 }}
+                onClick={handleCheckout}
+                disabled={checkoutLoading || cart.length === 0}
+              >
+                {checkoutLoading ? 'Processing...' : 'Checkout'}
               </Button>
             </>
           )}
@@ -438,6 +480,16 @@ const ConsumerDashboard = () => {
           </Button>
         </Box>
       </Drawer>
+
+      <Snackbar open={!!checkoutStatus} autoHideDuration={5000} onClose={() => setCheckoutStatus('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        {checkoutStatus === 'success' ? (
+          <Alert severity="success" onClose={() => setCheckoutStatus('')}>{checkoutMessage}</Alert>
+        ) : checkoutStatus === 'pending' ? (
+          <Alert severity="info" onClose={() => setCheckoutStatus('')}>{checkoutMessage}</Alert>
+        ) : checkoutStatus === 'error' ? (
+          <Alert severity="error" onClose={() => setCheckoutStatus('')}>{checkoutMessage}</Alert>
+        ) : null}
+      </Snackbar>
     </Box>
   );
 };

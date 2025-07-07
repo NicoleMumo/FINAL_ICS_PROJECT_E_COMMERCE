@@ -1,12 +1,18 @@
 const axios = require('axios');
 require('dotenv').config();
 
+const DEMO_MODE = true; // Set to true to mock Pesapal API
+
 const PESAPAL_BASE_URL = process.env.PESAPAL_BASE_URL || 'https://pay.pesapal.com/v3/api';
 const PESAPAL_CONSUMER_KEY = process.env.PESAPAL_CONSUMER_KEY;
 const PESAPAL_CONSUMER_SECRET = process.env.PESAPAL_CONSUMER_SECRET;
 
 // Get Pesapal OAuth token
 async function getPesapalToken() {
+  if (DEMO_MODE) {
+    // Return a fake token for demo
+    return 'demo-token';
+  }
   const url = `${PESAPAL_BASE_URL}/Auth/RequestToken`;
   const credentials = Buffer.from(`${PESAPAL_CONSUMER_KEY}:${PESAPAL_CONSUMER_SECRET}`).toString('base64');
   const headers = {
@@ -27,6 +33,14 @@ async function submitPesapalOrder({
   phone_number,
   token,
 }) {
+  if (DEMO_MODE) {
+    // Return a fake order response for demo
+    return {
+      order_tracking_id: 'demo-tracking-id',
+      redirect_url: 'https://demo.pesapal.com/redirect',
+      status: 'PENDING',
+    };
+  }
   const url = `${PESAPAL_BASE_URL}/Transactions/SubmitOrderRequest`;
   const headers = {
     Authorization: `Bearer ${token}`,
