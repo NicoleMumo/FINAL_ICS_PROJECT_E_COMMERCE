@@ -262,6 +262,11 @@ const ConsumerDashboard = () => {
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#212121', mt: 3, mb: 1 }}>Price Range</Typography>
             <RadioGroup value={priceRange} onChange={handlePriceChange}>
               <FormControlLabel
+                value=""
+                control={<Radio size="small" sx={{ color: '#4CAF50', '&.Mui-checked': { color: '#4CAF50' } }} />}
+                label={<Typography variant="body2" sx={{ color: '#212121' }}>All</Typography>}
+              />
+              <FormControlLabel
                 value="under10"
                 control={<Radio size="small" sx={{ color: '#4CAF50', '&.Mui-checked': { color: '#4CAF50' } }} />}
                 label={<Typography variant="body2" sx={{ color: '#212121' }}>Under Ksh10</Typography>}

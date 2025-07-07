@@ -167,9 +167,12 @@ exports.updateOrderStatus = async (req, res) => {
 // List all categories
 exports.getAllCategories = async (req, res) => {
   try {
+    console.log('Fetching all categories...');
     const categories = await prisma.category.findMany();
+    console.log('Categories fetched:', categories);
     res.json(categories);
   } catch (error) {
+    console.error('Error fetching categories:', error);
     res.status(500).json({ message: 'Error fetching categories', error: error.message });
   }
 };
@@ -177,10 +180,13 @@ exports.getAllCategories = async (req, res) => {
 // Add a category
 exports.createCategory = async (req, res) => {
   try {
+    console.log('Creating category with data:', req.body);
     const { name } = req.body;
     const category = await prisma.category.create({ data: { name } });
+    console.log('Category created successfully:', category);
     res.json(category);
   } catch (error) {
+    console.error('Error creating category:', error);
     res.status(500).json({ message: 'Error creating category', error: error.message });
   }
 };

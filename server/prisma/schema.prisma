@@ -26,6 +26,7 @@ model User {
   cart      Cart?
   otps      OTP[]
   products  Product[] @relation("FarmerProducts")
+  balance   Float     @default(0) // ✅ Add this!
 }
 
 model Product {
@@ -80,6 +81,7 @@ model Order {
   items     OrderItem[]
   status    OrderStatus @default(PENDING)
   total     Float
+  pesapalTrackingId String?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 }
@@ -116,7 +118,8 @@ enum Role {
 enum OrderStatus {
   PENDING
   PROCESSING
+  COMPLETED 
   SHIPPED
   DELIVERED
   CANCELLED
-} 
+}

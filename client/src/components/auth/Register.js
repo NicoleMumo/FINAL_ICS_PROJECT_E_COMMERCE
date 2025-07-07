@@ -19,6 +19,7 @@ const Register = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
     role: 'CONSUMER', // default role
@@ -131,6 +132,23 @@ const Register = () => {
                 label="Full Name"
                 name="name"
                 value={formData.name}
+                onChange={handleChange}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': { borderColor: '#E0E0E0' },
+                    '&:hover fieldset': { borderColor: '#4CAF50' },
+                    '&.Mui-focused fieldset': { borderColor: '#4CAF50' },
+                  },
+                }}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                label="Phone Number"
+                name="phone"
+                type="tel"
+                value={formData.phone}
                 onChange={handleChange}
                 sx={{
                   '& .MuiOutlinedInput-root': {
