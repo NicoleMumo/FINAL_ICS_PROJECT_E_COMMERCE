@@ -52,11 +52,23 @@ async function main() {
       password: hashedConsumerPassword,
       role: "CONSUMER",
       location: "Nairobi",
-      address: "456 City Road",
+      address: "456 Market St",
     },
   });
 
   const admin = await prisma.user.upsert({
+    where: { email: "admin@example.com" },
+    update: {},
+    create: {
+      name: "Admin User",
+      email: "admin@example.com",
+      phone: "0712345678",
+      password: hashedAdminPassword,
+      role: "ADMIN",
+    },
+  });
+
+  const admin1 = await prisma.user.upsert({
     where: { email: "admin1@example.com" },
     update: {},
     create: {
@@ -96,7 +108,9 @@ async function main() {
   });
 
   // Create an order for the consumer
-  const product = await prisma.product.findFirst({ where: { name: "Red Apples" } });
+  const product = await prisma.product.findFirst({
+    where: { name: "Red Apples" },
+  });
   const order = await prisma.order.create({
     data: {
       userId: consumer.id,
