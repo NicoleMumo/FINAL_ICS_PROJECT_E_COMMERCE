@@ -17,6 +17,7 @@ router.delete('/admin/products/:id', adminController.deleteProduct);
 router.get('/admin/orders', adminController.getAllOrders);
 router.get('/admin/orders/:id', adminController.getOrderById);
 router.put('/admin/orders/:id/status', adminController.updateOrderStatus);
+router.delete('/admin/orders/:id', adminController.deleteOrder);
 
 // Category management
 router.get('/admin/categories', adminController.getAllCategories);

@@ -163,6 +163,18 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
+// Delete an order (admin)
+exports.deleteOrder = async (req, res) => {
+  try {
+    // Delete order items first for referential integrity
+    await prisma.orderItem.deleteMany({ where: { orderId: req.params.id } });
+    await prisma.order.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Order deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting order', error: error.message });
+  }
+};
+
 // --- CATEGORY MANAGEMENT ---
 // List all categories
 exports.getAllCategories = async (req, res) => {

@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const { getFarmerRevenue } = require('./analyticsController');
 
 exports.getDashboardData = async (req, res) => {
   try {
@@ -37,26 +38,15 @@ exports.getDashboardData = async (req, res) => {
           999
         );
 
-        const monthlySalesResult = await prisma.order.aggregate({
-          where: {
-            status: "DELIVERED",
+        const monthlySales = await getFarmerRevenue(farmerId, {
+          order: {
+            status: "SHIPPED",
             createdAt: {
               gte: startOfMonth,
               lte: endOfMonth,
             },
-            items: {
-              some: {
-                product: {
-                  farmerId: farmerId,
-                },
-              },
-            },
-          },
-          _sum: {
-            total: true,
           },
         });
-        const monthlySales = monthlySalesResult._sum.total || 0;
 
         const lowStockItems = await prisma.product.count({
           where: {
@@ -141,5 +131,35 @@ exports.getDashboardData = async (req, res) => {
       message: "Error fetching dashboard data",
       error: error.message,
     });
+  }
+};
+
+exports.getThisMonthSales = async (req, res) => {
+  try {
+    const farmerId = req.userData.userId;
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
+    const monthlySales = await getFarmerRevenue(farmerId, {
+      order: {
+        status: "SHIPPED",
+        createdAt: {
+          gte: startOfMonth,
+          lte: endOfMonth,
+        },
+      },
+    });
+    res.json({ monthlySales });
+  } catch (error) {
+    console.error("Error fetching this month's sales:", error);
+    res.status(500).json({ message: "Failed to fetch this month's sales." });
   }
 }; 

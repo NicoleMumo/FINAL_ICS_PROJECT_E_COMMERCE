@@ -411,6 +411,9 @@ const ConsumerDashboard = () => {
                   <Typography variant="body2" sx={{ color: '#757575', mb: 1 }}>
                     {product.description}
                   </Typography>
+                  <Typography variant="body2" sx={{ color: '#4CAF50', mb: 1, fontWeight: 'bold' }}>
+                    In Stock: {product.stock}
+                  </Typography>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#4CAF50' }}>
                       Ksh{product.price} /kg

@@ -23,6 +23,7 @@ import {
   Alert
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -35,6 +36,7 @@ const OrderList = () => {
   const [status, setStatus] = useState('');
   const [statusLoading, setStatusLoading] = useState(false);
   const [success, setSuccess] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   const fetchOrders = async () => {
     try {
@@ -85,6 +87,22 @@ const OrderList = () => {
     }
   };
 
+  const handleDelete = async (orderId) => {
+    if (!window.confirm('Are you sure you want to delete this order?')) return;
+    try {
+      setDeleteError('');
+      setSuccess('');
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_BASE_URL}/admin/orders/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSuccess('Order deleted successfully!');
+      fetchOrders();
+    } catch (err) {
+      setDeleteError('Failed to delete order.');
+    }
+  };
+
   return (
     <Box sx={{ mt: 4 }}>
       <Typography variant="h5" gutterBottom>
@@ -92,6 +110,7 @@ const OrderList = () => {
       </Typography>
       {error && <Alert severity="error">{error}</Alert>}
       {success && <Alert severity="success">{success}</Alert>}
+      {deleteError && <Alert severity="error">{deleteError}</Alert>}
       {loading ? (
         <CircularProgress />
       ) : (
@@ -119,6 +138,11 @@ const OrderList = () => {
                     <Tooltip title="View Details">
                       <IconButton onClick={() => handleView(order)}>
                         <VisibilityIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton onClick={() => handleDelete(order.id)} color="error">
+                        <DeleteIcon />
                       </IconButton>
                     </Tooltip>
                   </TableCell>

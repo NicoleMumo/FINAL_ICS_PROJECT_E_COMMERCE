@@ -1,21 +1,29 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
+// Reusable function to get farmer revenue
+async function getFarmerRevenue(farmerId, dateRange = {}) {
+  const where = {
+    product: {
+      farmerId: farmerId,
+    },
+    ...dateRange,
+  };
+  const orderItems = await prisma.orderItem.findMany({
+    where,
+    select: {
+      price: true,
+      quantity: true,
+    },
+  });
+  return orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+}
+
 // Get sales summary for a farmer
 const getSalesSummary = async (req, res) => {
   try {
     const farmerId = req.userData.userId;
-
-    const totalSales = await prisma.orderItem.aggregate({
-      where: {
-        product: {
-          farmerId: farmerId,
-        },
-      },
-      _sum: {
-        price: true,
-      },
-    });
+    const totalSales = await getFarmerRevenue(farmerId);
 
     const totalOrders = await prisma.order.count({
       where: {
@@ -43,7 +51,7 @@ const getSalesSummary = async (req, res) => {
     });
 
     res.json({
-      totalSales: totalSales._sum.price || 0,
+      totalSales,
       totalOrders,
       uniqueCustomers: uniqueCustomers.length,
     });
@@ -230,4 +238,5 @@ module.exports = {
   getSalesTrend,
   getOrderStatusDistribution,
   getCategorySales,
+  getFarmerRevenue,
 };

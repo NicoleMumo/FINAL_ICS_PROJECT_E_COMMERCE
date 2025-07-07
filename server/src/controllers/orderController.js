@@ -200,7 +200,7 @@ exports.getMyOrders = async (req, res) => {
         },
       },
       include: {
-        user: true,
+        user: { select: { id: true, name: true, email: true, phone: true } },
         items: {
           include: {
             product: true,
@@ -211,7 +211,19 @@ exports.getMyOrders = async (req, res) => {
         createdAt: "desc",
       },
     });
-    res.json(orders);
+
+    // Filter items and calculate total for this farmer
+    const filteredOrders = orders.map(order => {
+      const farmerItems = order.items.filter(item => item.product.farmerId === farmerId);
+      const farmerTotal = farmerItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      return {
+        ...order,
+        items: farmerItems,
+        total: farmerTotal,
+      };
+    }).filter(order => order.items.length > 0); // Only include orders with this farmer's items
+
+    res.json(filteredOrders);
   } catch (error) {
     console.error("Error fetching farmer's orders:", error);
     res.status(500).json({ message: "Failed to fetch your orders." });
