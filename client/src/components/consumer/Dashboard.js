@@ -32,10 +32,14 @@ import {
   CheckCircleOutline as CheckCircleOutlineIcon,
   Add as AddIcon,
   Close as CloseIcon,
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  ReceiptLong as ReceiptLongIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
 
 const ConsumerDashboard = () => {
   const navigate = useNavigate();
@@ -65,6 +69,7 @@ const ConsumerDashboard = () => {
   const [cartError, setCartError] = useState("");
   const [showInStockOnly, setShowInStockOnly] = useState(false);
   const [orders, setOrders] = useState([]);
+  const [ordersModalOpen, setOrdersModalOpen] = useState(false);
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -364,13 +369,10 @@ const ConsumerDashboard = () => {
                 </Box>
               )}
             </IconButton>
-            <IconButton 
-              sx={{ color: '#212121' }} 
-              onClick={() => {
-                console.log('Opening profile drawer');
-                setProfileDrawerOpen(true);
-              }}
-            >
+            <IconButton sx={{ color: '#212121', mr: 1 }} onClick={() => setOrdersModalOpen(true)}>
+              <ReceiptLongIcon />
+            </IconButton>
+            <IconButton sx={{ color: '#212121' }} onClick={() => setProfileDrawerOpen(true)}>
               <PersonIcon />
             </IconButton>
           </Box>
@@ -536,6 +538,11 @@ const ConsumerDashboard = () => {
                   <Typography variant="body2" sx={{ color: '#4CAF50', mb: 1, fontWeight: 'bold' }}>
                     In Stock: {product.stock}
                   </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Sold by: {product.farmer?.name || 'Unknown'}
+                    </Typography>
+                  </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#4CAF50' }}>
                       Ksh{product.price} /kg
@@ -669,45 +676,45 @@ const ConsumerDashboard = () => {
         </Snackbar>
       )}
 
-      {/* Order History Section */}
-      <Box sx={{ mt: 6, mb: 4 }}>
-        <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#4CAF50', mb: 2 }}>
-          My Orders
-        </Typography>
-        {orders.length === 0 ? (
-          <Typography>No previous orders found.</Typography>
-        ) : (
-          <Paper sx={{ p: 2, boxShadow: 2 }}>
-            {orders.map(order => (
-              <Box key={order.id} sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="subtitle1">Order #{order.id}</Typography>
-                  <Chip label={order.status} color={
-                    order.status === 'COMPLETED' ? 'success' :
-                    order.status === 'DELIVERED' ? 'primary' :
-                    order.status === 'SHIPPED' ? 'info' :
-                    order.status === 'PROCESSING' ? 'warning' :
-                    order.status === 'CANCELLED' ? 'error' :
-                    'default'
-                  } />
+      {/* Order History Dialog */}
+      <Dialog open={ordersModalOpen} onClose={() => setOrdersModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>My Orders</DialogTitle>
+        <DialogContent>
+          {orders.length === 0 ? (
+            <Typography>No previous orders found.</Typography>
+          ) : (
+            <Paper sx={{ p: 2, boxShadow: 2 }}>
+              {orders.map(order => (
+                <Box key={order.id} sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="subtitle1">Order #{order.id}</Typography>
+                    <Chip label={order.status} color={
+                      order.status === 'COMPLETED' ? 'success' :
+                      order.status === 'DELIVERED' ? 'primary' :
+                      order.status === 'SHIPPED' ? 'info' :
+                      order.status === 'PROCESSING' ? 'warning' :
+                      order.status === 'CANCELLED' ? 'error' :
+                      'default'
+                    } />
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Placed: {new Date(order.createdAt).toLocaleString()}
+                  </Typography>
+                  <Divider sx={{ my: 1 }} />
+                  <Box>
+                    {order.items.map(item => (
+                      <Box key={item.id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Typography>{item.product?.name} x {item.quantity}</Typography>
+                        <Typography>Ksh{item.price}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
                 </Box>
-                <Typography variant="body2" color="text.secondary">
-                  Placed: {new Date(order.createdAt).toLocaleString()}
-                </Typography>
-                <Divider sx={{ my: 1 }} />
-                <Box>
-                  {order.items.map(item => (
-                    <Box key={item.id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography>{item.product?.name} x {item.quantity}</Typography>
-                      <Typography>Ksh{item.price}</Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-            ))}
-          </Paper>
-        )}
-      </Box>
+              ))}
+            </Paper>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

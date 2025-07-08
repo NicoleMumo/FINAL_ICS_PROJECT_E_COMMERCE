@@ -26,6 +26,14 @@ const CategoryList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newCategory, setNewCategory] = useState('');
+  const [newUnit, setNewUnit] = useState('');
+  const unitOptions = [
+    { value: 'leaf', label: 'Leaf (vegetables)' },
+    { value: 'kg', label: 'Kilogram (grains)' },
+    { value: 'fruit', label: 'Fruit (fruits)' },
+    { value: 'piece', label: 'Piece (poultry)' },
+    { value: 'litre', label: 'Litre (dairy)' },
+  ];
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -58,11 +66,11 @@ const CategoryList = () => {
 
   const handleAddCategory = async (e) => {
     e.preventDefault();
-    if (!newCategory.trim()) return;
-
+    if (!newCategory.trim() || !newUnit) return;
     try {
-      await axios.post('/api/admin/categories', { name: newCategory.trim() });
+      await axios.post('/api/admin/categories', { name: newCategory.trim(), unit: newUnit });
       setNewCategory('');
+      setNewUnit('');
       await fetchCategories();
     } catch (err) {
       console.error('Error adding category:', err);
@@ -88,22 +96,37 @@ const CategoryList = () => {
               <TextField
                 fullWidth
                 size="small"
-            value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value)}
-            placeholder="Enter new category name"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="Enter new category name"
                 variant="outlined"
-          />
+              />
+              <TextField
+                select
+                size="small"
+                value={newUnit}
+                onChange={(e) => setNewUnit(e.target.value)}
+                placeholder="Select unit"
+                variant="outlined"
+                sx={{ minWidth: 140 }}
+                SelectProps={{ native: true }}
+              >
+                <option value="">Select unit</option>
+                {unitOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </TextField>
               <Button
-            type="submit"
+                type="submit"
                 variant="contained"
                 color="primary"
                 startIcon={<AddIcon />}
-                disabled={!newCategory.trim()}
-          >
-            Add Category
+                disabled={!newCategory.trim() || !newUnit}
+              >
+                Add Category
               </Button>
             </Box>
-        </form>
+          </form>
         </CardContent>
       </Card>
 
@@ -122,6 +145,7 @@ const CategoryList = () => {
               <TableRow sx={{ backgroundColor: 'background.default' }}>
                 <TableCell>ID</TableCell>
                 <TableCell>Name</TableCell>
+                <TableCell>Unit</TableCell>
                 <TableCell>Created At</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
@@ -135,6 +159,9 @@ const CategoryList = () => {
                   <TableCell>{category.id}</TableCell>
                   <TableCell>
                     <Typography variant="subtitle2">{category.name}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">{category.unit || '-'}</Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">

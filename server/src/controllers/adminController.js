@@ -461,8 +461,8 @@ exports.getAllCategories = async (req, res) => {
 
 exports.createCategory = async (req, res) => {
   try {
-    const { name } = req.body;
-    const category = await prisma.category.create({ data: { name } });
+    const { name, unit } = req.body;
+    const category = await prisma.category.create({ data: { name, unit } });
     res.json(category);
   } catch (error) {
     res.status(500).json({ message: 'Error creating category', error: error.message });
@@ -471,10 +471,10 @@ exports.createCategory = async (req, res) => {
 
 exports.updateCategory = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, unit } = req.body;
     const category = await prisma.category.update({
       where: { id: Number(req.params.id) },
-      data: { name },
+      data: { name, unit },
     });
     res.json(category);
   } catch (error) {

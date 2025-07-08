@@ -94,6 +94,7 @@ async function main() {
       stock: 45,
       imageUrl: "https://placehold.co/150x150/4CAF50/FFFFFF?text=Tomatoes",
       categoryId: categoryVegetables.id,
+      farmerId: farmerUser.id,
     },
   });
   console.log(`Created product: ${productTomatoes.name}`);
@@ -109,6 +110,7 @@ async function main() {
       stock: 8, // Low stock for testing low stock alerts
       imageUrl: "https://placehold.co/150x150/FF9800/FFFFFF?text=Carrots",
       categoryId: categoryVegetables.id,
+      farmerId: farmerUser.id,
     },
   });
   console.log(`Created product: ${productCarrots.name}`);
@@ -124,6 +126,7 @@ async function main() {
       stock: 30,
       imageUrl: "https://placehold.co/150x150/8BC34A/FFFFFF?text=Avocado",
       categoryId: categoryFruits.id,
+      farmerId: farmerUser.id,
     },
   });
   console.log(`Created product: ${productAvocadoes.name}`);
@@ -139,6 +142,7 @@ async function main() {
       stock: 15,
       imageUrl: "https://placehold.co/150x150/B3E5FC/FFFFFF?text=Milk",
       categoryId: categoryDairy.id,
+      farmerId: farmerUser.id,
     },
   });
   console.log(`Created product: ${productMilk.name}`);

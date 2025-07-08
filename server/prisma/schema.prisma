@@ -49,6 +49,7 @@ model Product {
 model Category {
   id        Int       @id @default(autoincrement())
   name      String    @unique
+  unit      String    // New field for unit (e.g., kg, litre, piece, etc.)
   products  Product[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

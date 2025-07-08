@@ -23,6 +23,7 @@ exports.getProducts = async (req, res) => {
     const products = await prisma.product.findMany({
       include: {
         category: true,
+        farmer: { select: { id: true, name: true } },
       },
       orderBy: {
         name: "asc",
@@ -41,7 +42,7 @@ exports.getProductById = async (req, res) => {
     const { id } = req.params;
     const product = await prisma.product.findUnique({
       where: { id },
-      include: { category: true },
+      include: { category: true, farmer: { select: { id: true, name: true } } },
     });
 
     if (!product) {
