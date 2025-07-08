@@ -79,7 +79,7 @@ const OrderList = () => {
   };
 
   const calculateOrderTotal = (items = []) => {
-    return items.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2);
+    return items.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
   return (
@@ -144,7 +144,7 @@ const OrderList = () => {
                           <ListItemText
                             primary={
                               <Typography variant="body2">
-                                {item.product?.name} ({item.quantity} × ${item.price})
+                                {item.product?.name} ({item.quantity} × Ksh {item.price.toLocaleString()})
                               </Typography>
                             }
                           />
@@ -154,7 +154,7 @@ const OrderList = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="subtitle2" color="primary.main">
-                      ${order.total || calculateOrderTotal(order.items)}
+                      Ksh {(order.total || calculateOrderTotal(order.items)).toLocaleString()}
                     </Typography>
                   </TableCell>
                   <TableCell>

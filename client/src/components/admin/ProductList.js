@@ -54,7 +54,7 @@ const ProductList = () => {
   };
 
   const formatPrice = (price) => {
-    return typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A';
+    return typeof price === 'number' ? `Ksh ${price.toLocaleString()}` : 'N/A';
   };
 
   return (
