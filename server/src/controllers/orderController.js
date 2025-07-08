@@ -316,7 +316,9 @@ exports.createOrder = async (req, res) => {
     const orderItems = await Promise.all(items.map(async (item) => {
       const product = await prisma.product.findUnique({ where: { id: item.productId } });
       if (!product) throw new Error('Product not found');
-      if (product.stock < item.quantity) throw new Error('Insufficient stock');
+      if (product.stock < item.quantity) {
+        throw new Error(`Stock for ${product.name} is outdated. Please refresh and try again.`);
+      }
       total += product.price * item.quantity;
       return {
         productId: product.id,
@@ -366,10 +368,12 @@ exports.pesapalCallback = async (req, res) => {
     const order = await prisma.order.findUnique({ where: { id: MerchantReference }, include: { items: { include: { product: true } } } });
     if (!order) return res.status(404).json({ message: 'Order not found.' });
     if (PaymentStatus === 'COMPLETED') {
+      console.log('Payment callback: updating stock for order', order.id);
       // Update order status
       await prisma.order.update({ where: { id: order.id }, data: { status: 'COMPLETED' } });
       // For each order item: decrease stock, add to farmer balance
       for (const item of order.items) {
+        console.log('Decrementing stock for product', item.productId, 'by', item.quantity);
         // Decrease product stock
         await prisma.product.update({ where: { id: item.productId }, data: { stock: { decrement: item.quantity } } });
         // Add to farmer balance

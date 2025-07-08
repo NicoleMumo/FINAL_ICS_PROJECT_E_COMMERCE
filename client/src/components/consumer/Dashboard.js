@@ -59,6 +59,7 @@ const ConsumerDashboard = () => {
   const [checkoutMessage, setCheckoutMessage] = useState('');
   const [shippingAddress, setShippingAddress] = useState("");
   const [addressStatus, setAddressStatus] = useState("");
+  const [cartError, setCartError] = useState("");
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -111,37 +112,44 @@ const ConsumerDashboard = () => {
     fetchUser();
   }, []);
 
-  const handleCategoryChange = (event) => {
-    setCategoryFilters({
-      ...categoryFilters,
-      [event.target.name]: event.target.checked,
-    });
-  };
-
-  const handlePriceChange = (event) => {
-    setPriceRange(event.target.value);
-  };
-
-  const handleApplyFilters = () => {
-    // Logic to apply filters
-    console.log('Applying Filters:', { categoryFilters, priceRange });
+  // Move fetchProducts to top level
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      setFetchError("");
+      const res = await axios.get('http://localhost:5000/api/products');
+      setProducts(res.data);
+    } catch (err) {
+      setFetchError("Failed to load products.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    fetchProducts();
+  }, []);
+
+  // Poll for products every 5 seconds for live stock updates (background update, no loading spinner)
+  useEffect(() => {
+    const pollProducts = async () => {
       try {
-        setLoading(true);
-        setFetchError("");
         const res = await axios.get('http://localhost:5000/api/products');
         setProducts(res.data);
       } catch (err) {
-        setFetchError("Failed to load products.");
-      } finally {
-        setLoading(false);
+        // Optionally handle error
       }
     };
-    fetchProducts();
+    const interval = setInterval(pollProducts, 5000);
+    return () => clearInterval(interval);
   }, []);
+
+  // After successful checkout, refresh products
+  useEffect(() => {
+    if (checkoutStatus === 'success') {
+      fetchProducts();
+    }
+  }, [checkoutStatus]);
 
   // --- Combined Filtering Logic ---
   const filteredProducts = products.filter(product => {
@@ -173,10 +181,16 @@ const ConsumerDashboard = () => {
     return matchesSearch && matchesCategory && matchesPrice && matchesExactPrice;
   });
 
-  // Add to cart handler
+  // Add to cart handler (prevent exceeding stock)
   const handleAddToCart = (product) => {
     setCart((prevCart) => {
       const existing = prevCart.find((item) => item.id === product.id);
+      const currentQty = existing ? existing.quantity : 0;
+      if (currentQty + 1 > product.stock) {
+        setCartError('Cannot add more than available stock!');
+        setTimeout(() => setCartError(''), 2000);
+        return prevCart;
+      }
       if (existing) {
         return prevCart.map((item) =>
           item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
@@ -200,18 +214,22 @@ const ConsumerDashboard = () => {
       const res = await axios.post('http://localhost:5000/api/orders', { userId, items, shippingAddress });
       setCheckoutStatus('pending');
       setCheckoutMessage('STK push sent! Please complete payment on your phone.');
-      // Simulate polling for payment status (in real app, poll or use websocket)
       setTimeout(async () => {
-        // Simulate backend payment callback
-        // In real app, poll /api/orders/:id or listen for webhook
         setCheckoutStatus('success');
         setCheckoutMessage('Payment successful! Thank you for your order.');
         setCart([]);
         localStorage.removeItem('cart');
+        await fetchProducts(); // Refresh products after successful checkout
       }, 4000);
     } catch (err) {
-      setCheckoutStatus('error');
-      setCheckoutMessage(err.response?.data?.message || 'Checkout failed.');
+      if (err.response?.data?.message && err.response.data.message.includes('outdated')) {
+        setCheckoutStatus('error');
+        setCheckoutMessage(err.response.data.message);
+        await fetchProducts(); // Refresh products if stock is outdated
+      } else {
+        setCheckoutStatus('error');
+        setCheckoutMessage(err.response?.data?.message || 'Checkout failed.');
+      }
     } finally {
       setCheckoutLoading(false);
     }
@@ -340,7 +358,10 @@ const ConsumerDashboard = () => {
                   <Checkbox
                     name={String(cat.id)}
                     checked={!!categoryFilters[cat.id]}
-                    onChange={handleCategoryChange}
+                    onChange={(event) => setCategoryFilters({
+                      ...categoryFilters,
+                      [event.target.name]: event.target.checked,
+                    })}
                     sx={{ color: '#4CAF50', '&.Mui-checked': { color: '#4CAF50' } }}
                   />
                 }
@@ -349,7 +370,7 @@ const ConsumerDashboard = () => {
             ))}
 
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#212121', mt: 3, mb: 1 }}>Price Range</Typography>
-            <RadioGroup value={priceRange} onChange={handlePriceChange}>
+            <RadioGroup value={priceRange} onChange={(event) => setPriceRange(event.target.value)}>
               <FormControlLabel
                 value=""
                 control={<Radio size="small" sx={{ color: '#4CAF50', '&.Mui-checked': { color: '#4CAF50' } }} />}
@@ -383,9 +404,9 @@ const ConsumerDashboard = () => {
               variant="outlined"
               size="small"
               value={exactPrice}
-              onChange={e => {
+              onChange={(event) => {
                 // Only allow whole numbers
-                const val = e.target.value;
+                const val = event.target.value;
                 if (val === '' || /^[0-9]+$/.test(val)) setExactPrice(val);
               }}
               sx={{ mt: 2, width: '100%' }}
@@ -395,7 +416,10 @@ const ConsumerDashboard = () => {
             <Button
               fullWidth
               variant="contained"
-              onClick={handleApplyFilters}
+              onClick={() => {
+                // Logic to apply filters
+                console.log('Applying Filters:', { categoryFilters, priceRange });
+              }}
               sx={{
                 mt: 3,
                 bgcolor: '#212121',
@@ -472,14 +496,20 @@ const ConsumerDashboard = () => {
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#4CAF50' }}>
                       Ksh{product.price} /kg
                     </Typography>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={() => handleAddToCart(product)}
-                      sx={{ mt: 1 }}
-                    >
-                      Add to Cart
-                    </Button>
+                    {product.stock > 0 ? (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => handleAddToCart(product)}
+                        sx={{ mt: 1 }}
+                      >
+                        Add to Cart
+                      </Button>
+                    ) : (
+                      <Button variant="contained" color="error" disabled sx={{ mt: 1 }}>
+                        Out of Stock
+                      </Button>
+                    )}
                   </Box>
                 </Paper>
               </Grid>
@@ -588,6 +618,13 @@ const ConsumerDashboard = () => {
           <Alert severity="error" onClose={() => setCheckoutStatus('')}>{checkoutMessage}</Alert>
         ) : null}
       </Snackbar>
+
+      {/* Show cart error if any */}
+      {cartError && (
+        <Snackbar open={!!cartError} autoHideDuration={2000} onClose={() => setCartError('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+          <Alert severity="error" onClose={() => setCartError('')}>{cartError}</Alert>
+        </Snackbar>
+      )}
     </Box>
   );
 };

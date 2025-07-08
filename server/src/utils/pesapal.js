@@ -33,8 +33,22 @@ async function submitPesapalOrder({
   phone_number,
   token,
 }) {
+  console.log('submitPesapalOrder called for order', id);
   if (DEMO_MODE) {
+    console.log('DEMO_MODE: submitPesapalOrder called for order', id);
     // Return a fake order response for demo
+    // AUTOMATE: Trigger payment callback after mock payment
+    setTimeout(async () => {
+      try {
+        await axios.post('http://localhost:5000/api/payment-callback', {
+          MerchantReference: id,
+          PaymentStatus: 'COMPLETED',
+        });
+        console.log('Automated payment callback triggered for order', id);
+      } catch (err) {
+        console.error('Error triggering payment callback:', err.response?.data || err.message);
+      }
+    }, 2000); // Simulate delay
     return {
       order_tracking_id: 'demo-tracking-id',
       redirect_url: 'https://demo.pesapal.com/redirect',
