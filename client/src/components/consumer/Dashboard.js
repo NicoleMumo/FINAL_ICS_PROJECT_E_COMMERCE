@@ -545,7 +545,7 @@ const ConsumerDashboard = () => {
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#4CAF50' }}>
-                      Ksh{product.price} /kg
+                      Ksh{product.price} {product.category && product.category.unit ? `/ ${product.category.unit}` : ''}
                     </Typography>
                     {product.stock > 0 ? (
                       <Button
