@@ -29,7 +29,8 @@ import {
   Person as PersonIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
   Add as AddIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Logout as LogoutIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -60,6 +61,7 @@ const ConsumerDashboard = () => {
   const [shippingAddress, setShippingAddress] = useState("");
   const [addressStatus, setAddressStatus] = useState("");
   const [cartError, setCartError] = useState("");
+  const [showInStockOnly, setShowInStockOnly] = useState(false);
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -151,8 +153,16 @@ const ConsumerDashboard = () => {
     }
   }, [checkoutStatus]);
 
-  // --- Combined Filtering Logic ---
-  const filteredProducts = products.filter(product => {
+  // --- Combined Filtering and Sorting Logic ---
+  let sortedProducts = [...products];
+  if (sortBy === 'Price: Low to High') {
+    sortedProducts.sort((a, b) => a.price - b.price);
+  } else if (sortBy === 'Price: High to Low') {
+    sortedProducts.sort((a, b) => b.price - a.price);
+  } else if (sortBy === 'Newest') {
+    sortedProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+  const filteredProducts = sortedProducts.filter(product => {
     // Search filter
     const matchesSearch =
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -177,6 +187,8 @@ const ConsumerDashboard = () => {
     if (exactPrice !== '') {
       matchesExactPrice = product.price === Number(exactPrice);
     }
+
+    if (showInStockOnly && product.stock <= 0) return false;
 
     return matchesSearch && matchesCategory && matchesPrice && matchesExactPrice;
   });
@@ -414,6 +426,16 @@ const ConsumerDashboard = () => {
             />
 
             <Button
+              variant={showInStockOnly ? 'contained' : 'outlined'}
+              color="success"
+              fullWidth
+              sx={{ mt: 2, mb: 2 }}
+              onClick={() => setShowInStockOnly((prev) => !prev)}
+            >
+              {showInStockOnly ? 'Showing In Stock Only' : 'Show In Stock Only'}
+            </Button>
+
+            <Button
               fullWidth
               variant="contained"
               onClick={() => {
@@ -598,13 +620,12 @@ const ConsumerDashboard = () => {
             {addressStatus && <Typography sx={{ ml: 2, color: addressStatus.includes('updated') ? 'green' : 'red' }}>{addressStatus}</Typography>}
           </Box>
           <Button 
-            variant="contained" 
-            color="primary" 
-            fullWidth 
+            color="inherit"
             onClick={handleLogout}
+            startIcon={<LogoutIcon />}
             sx={{ mt: 2 }}
           >
-            Log Out
+            Logout
           </Button>
         </Box>
       </Drawer>
