@@ -88,22 +88,22 @@ const CategoryList = () => {
               <TextField
                 fullWidth
                 size="small"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                placeholder="Enter new category name"
+            value={newCategory}
+            onChange={(e) => setNewCategory(e.target.value)}
+            placeholder="Enter new category name"
                 variant="outlined"
-              />
+          />
               <Button
-                type="submit"
+            type="submit"
                 variant="contained"
                 color="primary"
                 startIcon={<AddIcon />}
                 disabled={!newCategory.trim()}
-              >
-                Add Category
+          >
+            Add Category
               </Button>
             </Box>
-          </form>
+        </form>
         </CardContent>
       </Card>
 

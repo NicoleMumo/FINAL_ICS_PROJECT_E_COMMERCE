@@ -300,9 +300,13 @@ exports.updateOrderStatus = async (req, res) => {
 // Create order and initiate Pesapal payment
 exports.createOrder = async (req, res) => {
   try {
-    const { userId, items } = req.body;
+    const { userId, items, shippingAddress } = req.body;
+    console.log('Received shippingAddress:', shippingAddress);
     if (!userId || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'Invalid order data.' });
+    }
+    if (!shippingAddress || shippingAddress.trim() === "") {
+      return res.status(400).json({ message: 'Shipping address is required.' });
     }
     // Get user and cart details
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -329,6 +333,7 @@ exports.createOrder = async (req, res) => {
         items: {
           create: orderItems,
         },
+        shippingAddress: shippingAddress,
       },
       include: { items: true },
     });

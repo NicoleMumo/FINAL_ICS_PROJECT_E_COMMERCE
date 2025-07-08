@@ -57,6 +57,8 @@ const ConsumerDashboard = () => {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutStatus, setCheckoutStatus] = useState(''); // '', 'pending', 'success', 'error'
   const [checkoutMessage, setCheckoutMessage] = useState('');
+  const [shippingAddress, setShippingAddress] = useState("");
+  const [addressStatus, setAddressStatus] = useState("");
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -91,6 +93,22 @@ const ConsumerDashboard = () => {
         setUserEmail("");
       }
     }
+  }, []);
+
+  // Fetch user address on mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const storedUser = localStorage.getItem('user');
+        if (!storedUser) return;
+        const userObj = JSON.parse(storedUser);
+        const res = await axios.get(`/api/users/${userObj.id}`);
+        setShippingAddress(res.data.address || "");
+      } catch (err) {
+        // Optionally handle error
+      }
+    };
+    fetchUser();
   }, []);
 
   const handleCategoryChange = (event) => {
@@ -179,7 +197,7 @@ const ConsumerDashboard = () => {
       const userObj = JSON.parse(storedUser);
       const userId = userObj.id;
       const items = cart.map(item => ({ productId: item.id, quantity: item.quantity }));
-      const res = await axios.post('http://localhost:5000/api/orders', { userId, items });
+      const res = await axios.post('http://localhost:5000/api/orders', { userId, items, shippingAddress });
       setCheckoutStatus('pending');
       setCheckoutMessage('STK push sent! Please complete payment on your phone.');
       // Simulate polling for payment status (in real app, poll or use websocket)
@@ -209,6 +227,20 @@ const ConsumerDashboard = () => {
       navigate('/login', { replace: true });
     } catch (error) {
       console.error('Error during logout:', error);
+    }
+  };
+
+  const handleAddressSave = async () => {
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (!storedUser) throw new Error('User not logged in');
+      const userObj = JSON.parse(storedUser);
+      await axios.put(`/api/users/${userObj.id}/address`, { address: shippingAddress });
+      setAddressStatus('Address updated!');
+      setTimeout(() => setAddressStatus(''), 2000);
+    } catch (err) {
+      setAddressStatus('Failed to update address');
+      setTimeout(() => setAddressStatus(''), 2000);
     }
   };
 
@@ -529,6 +561,24 @@ const ConsumerDashboard = () => {
           </Button>
         </Box>
       </Drawer>
+
+      {/* Shipping Address Section */}
+      <Box sx={{ mb: 4, p: 2, background: '#f5f5f5', borderRadius: 2 }}>
+        <Typography variant="h6" sx={{ mb: 1 }}>Shipping Address</Typography>
+        <TextField
+          fullWidth
+          multiline
+          minRows={2}
+          value={shippingAddress}
+          onChange={e => setShippingAddress(e.target.value)}
+          placeholder="Enter your shipping address"
+          sx={{ mb: 1 }}
+        />
+        <Button variant="contained" onClick={handleAddressSave} sx={{ bgcolor: '#4CAF50', color: '#212121' }}>
+          Save Address
+        </Button>
+        {addressStatus && <Typography sx={{ ml: 2, color: addressStatus.includes('updated') ? 'green' : 'red' }}>{addressStatus}</Typography>}
+      </Box>
 
       <Snackbar open={!!checkoutStatus} autoHideDuration={5000} onClose={() => setCheckoutStatus('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         {checkoutStatus === 'success' ? (

@@ -48,6 +48,7 @@ app.use("/api", categoryRoutes);
 app.use("/api", dashboardRoutes);
 app.use("/api", analyticsRoutes);
 app.use("/api", adminRoutes); // Changed back to /api since we'll update the routes
+app.use("/api", authRoutes); // Mount user endpoints at /api/users
 
 app.get("/", (req, res) => {
   res.send("FarmDirect Backend API is running!");
