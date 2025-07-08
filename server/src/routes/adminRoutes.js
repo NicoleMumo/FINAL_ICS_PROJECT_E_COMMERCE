@@ -1,31 +1,35 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const { verifyAdmin } = require('../middleware');
+
+// Dashboard routes
+router.get('/api/admin/dashboard/summary', verifyAdmin, adminController.getDashboardSummary);
+router.get('/api/admin/dashboard/recent-activity', verifyAdmin, adminController.getRecentActivity);
+router.get('/api/admin/categories/stats', verifyAdmin, adminController.getCategoryStats);
+router.get('/api/admin/products/stats', verifyAdmin, adminController.getProductStats);
 
 // User management
-router.get('/admin/users', adminController.getAllUsers);
-router.get('/admin/users/:id', adminController.getUserById);
-router.put('/admin/users/:id', adminController.updateUser);
-router.delete('/admin/users/:id', adminController.deleteUser);
+router.get('/api/admin/users', verifyAdmin, adminController.getAllUsers);
+router.get('/api/admin/users/:id', verifyAdmin, adminController.getUserById);
+router.put('/api/admin/users/:id', verifyAdmin, adminController.updateUser);
+router.delete('/api/admin/users/:id', verifyAdmin, adminController.deleteUser);
 
 // Product management
-router.get('/admin/products', adminController.getAllProducts);
-router.put('/admin/products/:id', adminController.updateProduct);
-router.delete('/admin/products/:id', adminController.deleteProduct);
+router.get('/api/admin/products', verifyAdmin, adminController.getAllProducts);
+router.put('/api/admin/products/:id', verifyAdmin, adminController.updateProduct);
+router.delete('/api/admin/products/:id', verifyAdmin, adminController.deleteProduct);
 
 // Order management
-router.get('/admin/orders', adminController.getAllOrders);
-router.get('/admin/orders/:id', adminController.getOrderById);
-router.put('/admin/orders/:id/status', adminController.updateOrderStatus);
-router.delete('/admin/orders/:id', adminController.deleteOrder);
+router.get('/api/admin/orders', verifyAdmin, adminController.getAllOrders);
+router.get('/api/admin/orders/:id', verifyAdmin, adminController.getOrderById);
+router.put('/api/admin/orders/:id', verifyAdmin, adminController.updateOrderStatus);
+router.delete('/api/admin/orders/:id', verifyAdmin, adminController.deleteOrder);
 
 // Category management
-router.get('/admin/categories', adminController.getAllCategories);
-router.post('/admin/categories', adminController.createCategory);
-router.put('/admin/categories/:id', adminController.updateCategory);
-router.delete('/admin/categories/:id', adminController.deleteCategory);
-
-// Analytics / summary
-router.get('/admin/summary', adminController.getAdminSummary);
+router.get('/api/admin/categories', verifyAdmin, adminController.getAllCategories);
+router.post('/api/admin/categories', verifyAdmin, adminController.createCategory);
+router.put('/api/admin/categories/:id', verifyAdmin, adminController.updateCategory);
+router.delete('/api/admin/categories/:id', verifyAdmin, adminController.deleteCategory);
 
 module.exports = router; 

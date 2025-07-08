@@ -1,170 +1,154 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
-  Box,
-  Typography,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   IconButton,
+  Typography,
+  Box,
   CircularProgress,
-  Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
+  Alert,
   TextField,
-  Alert
+  Button,
+  Card,
+  CardContent,
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
-
-const API_BASE_URL = 'http://localhost:5000/api';
+import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import AdminLayout from '../../layouts/AdminLayout';
 
 const CategoryList = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [editOpen, setEditOpen] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [editData, setEditData] = useState({ name: '' });
-  const [addData, setAddData] = useState({ name: '' });
-  const [success, setSuccess] = useState('');
-  const [deleteError, setDeleteError] = useState('');
+  const [error, setError] = useState(null);
+  const [newCategory, setNewCategory] = useState('');
 
   const fetchCategories = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError('');
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/admin/categories`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setCategories(response.data);
+      const { data } = await axios.get('/api/admin/categories');
+      setCategories(Array.isArray(data) ? data : []);
+      setError(null);
     } catch (err) {
-      setError('Failed to load categories.');
-    } finally {
-      setLoading(false);
+      console.error('Error fetching categories:', err);
+      setError(err.response?.data?.message || 'Failed to fetch categories');
+      setCategories([]);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  const handleEdit = (category) => {
-    setEditData({ name: category.name });
-    setSelectedCategory(category);
-    setEditOpen(true);
-  };
-
-  const handleEditChange = (e) => {
-    setEditData({ ...editData, [e.target.name]: e.target.value });
-  };
-
-  const handleEditSubmit = async () => {
-    try {
-      setDeleteError('');
-      setSuccess('');
-      const token = localStorage.getItem('token');
-      await axios.put(`${API_BASE_URL}/admin/categories/${selectedCategory.id}`, editData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSuccess('Category updated successfully!');
-      setEditOpen(false);
-      fetchCategories();
-    } catch (err) {
-      setDeleteError('Failed to update category.');
-    }
-  };
-
   const handleDelete = async (categoryId) => {
-    if (!window.confirm('Are you sure you want to delete this category?')) return;
+    if (!window.confirm('Delete this category?')) return;
     try {
-      setDeleteError('');
-      setSuccess('');
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/admin/categories/${categoryId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSuccess('Category deleted successfully!');
-      fetchCategories();
+      await axios.delete(`/api/admin/categories/${categoryId}`);
+      await fetchCategories();
     } catch (err) {
-      setDeleteError('Failed to delete category.');
+      console.error('Error deleting category:', err);
+      setError(err.response?.data?.message || 'Failed to delete category');
     }
   };
 
-  const handleAdd = () => {
-    setAddData({ name: '' });
-    setAddOpen(true);
-  };
+  const handleAddCategory = async (e) => {
+    e.preventDefault();
+    if (!newCategory.trim()) return;
 
-  const handleAddChange = (e) => {
-    setAddData({ ...addData, [e.target.name]: e.target.value });
-  };
-
-  const handleAddSubmit = async () => {
     try {
-      setDeleteError('');
-      setSuccess('');
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_BASE_URL}/admin/categories`, addData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSuccess('Category added successfully!');
-      setAddOpen(false);
-      fetchCategories();
+      await axios.post('/api/admin/categories', { name: newCategory.trim() });
+      setNewCategory('');
+      await fetchCategories();
     } catch (err) {
-      setDeleteError('Failed to add category.');
+      console.error('Error adding category:', err);
+      setError(err.response?.data?.message || 'Failed to add category');
     }
   };
 
   return (
-    <Box sx={{ mt: 4 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5" gutterBottom sx={{ flexGrow: 1 }}>
+    <AdminLayout>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom color="primary">
           Category Management
         </Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
-          Add Category
-        </Button>
+        <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+          Organize and manage product categories
+        </Typography>
       </Box>
-      {error && <Alert severity="error">{error}</Alert>}
-      {success && <Alert severity="success">{success}</Alert>}
-      {deleteError && <Alert severity="error">{deleteError}</Alert>}
+
+      <Card sx={{ mb: 4, boxShadow: 2 }}>
+        <CardContent>
+          <form onSubmit={handleAddCategory}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                fullWidth
+                size="small"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="Enter new category name"
+                variant="outlined"
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                disabled={!newCategory.trim()}
+              >
+                Add Category
+              </Button>
+            </Box>
+          </form>
+        </CardContent>
+      </Card>
+
       {loading ? (
-        <CircularProgress />
+        <Box display="flex" justifyContent="center" m={4}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 4 }}>{error}</Alert>
+      ) : categories.length === 0 ? (
+        <Alert severity="info">No categories found</Alert>
       ) : (
-        <TableContainer component={Paper} sx={{ mt: 2 }}>
-          <Table>
+        <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
+          <Table sx={{ minWidth: 650 }}>
             <TableHead>
-              <TableRow>
+              <TableRow sx={{ backgroundColor: 'background.default' }}>
+                <TableCell>ID</TableCell>
                 <TableCell>Name</TableCell>
+                <TableCell>Created At</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {categories.map((category) => (
-                <TableRow key={category.id}>
-                  <TableCell>{category.name}</TableCell>
+                <TableRow
+                  key={category.id}
+                  sx={{ '&:hover': { backgroundColor: 'action.hover' } }}
+                >
+                  <TableCell>{category.id}</TableCell>
+                  <TableCell>
+                    <Typography variant="subtitle2">{category.name}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {new Date(category.createdAt).toLocaleDateString()}
+                    </Typography>
+                  </TableCell>
                   <TableCell align="right">
-                    <Tooltip title="Edit">
-                      <IconButton onClick={() => handleEdit(category)}>
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton onClick={() => handleDelete(category.id)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
+                    <IconButton
+                      onClick={() => handleDelete(category.id)}
+                      color="error"
+                      size="small"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
@@ -172,43 +156,7 @@ const CategoryList = () => {
           </Table>
         </TableContainer>
       )}
-      {/* Edit Category Dialog */}
-      <Dialog open={editOpen} onClose={() => setEditOpen(false)}>
-        <DialogTitle>Edit Category</DialogTitle>
-        <DialogContent>
-          <TextField
-            margin="dense"
-            label="Name"
-            name="name"
-            value={editData.name}
-            onChange={handleEditChange}
-            fullWidth
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditOpen(false)}>Cancel</Button>
-          <Button onClick={handleEditSubmit} variant="contained">Save</Button>
-        </DialogActions>
-      </Dialog>
-      {/* Add Category Dialog */}
-      <Dialog open={addOpen} onClose={() => setAddOpen(false)}>
-        <DialogTitle>Add Category</DialogTitle>
-        <DialogContent>
-          <TextField
-            margin="dense"
-            label="Name"
-            name="name"
-            value={addData.name}
-            onChange={handleAddChange}
-            fullWidth
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddOpen(false)}>Cancel</Button>
-          <Button onClick={handleAddSubmit} variant="contained">Add</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+    </AdminLayout>
   );
 };
 

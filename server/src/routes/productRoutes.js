@@ -1,8 +1,8 @@
 // server/src/routes/productRoutes.js
 const express = require("express");
 const router = express.Router();
-const productController = require("../controllers/productController"); // <-- Fix: import the whole controller
-const authMiddleware = require("../middleware");
+const productController = require("../controllers/productController");
+const { verifyAuth } = require("../middleware");
 
 // Ensure uploads folder exists
 const fs = require("fs");
@@ -13,12 +13,12 @@ if (!fs.existsSync(uploadsDir)) {
 
 router.get("/products", productController.getProducts);
 // IMPORTANT: Define specific routes like '/my' before parameterized routes like '/:id'
-router.get("/products/my", authMiddleware, productController.getMyProducts);
+router.get("/products/my", verifyAuth, productController.getMyProducts);
 router.get("/products/:id", productController.getProductById);
 
 router.post(
   "/products",
-  authMiddleware,
+  verifyAuth,
   (req, res, next) => {
     productController.upload(req, res, function (err) {
       if (err) {
@@ -30,19 +30,20 @@ router.post(
   },
   productController.addProduct
 );
+
 router.put(
   "/products/:id",
-  authMiddleware,
+  verifyAuth,
   productController.upload,
   productController.updateProduct
-); // <-- Allow image update
+);
 
-router.delete("/products/:id", authMiddleware, productController.deleteProduct);
+router.delete("/products/:id", verifyAuth, productController.deleteProduct);
 
 // Route for updating only stock (more efficient for inventory management)
 router.patch(
   "/products/:id/stock",
-  authMiddleware,
+  verifyAuth,
   productController.updateStock
 );
 

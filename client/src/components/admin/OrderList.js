@@ -1,150 +1,191 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
-  Box,
-  Typography,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  IconButton,
+  Typography,
+  Box,
+  Chip,
   CircularProgress,
-  Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  MenuItem,
+  Alert,
   Select,
-  Alert
+  MenuItem,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import DeleteIcon from '@mui/icons-material/Delete';
-
-const API_BASE_URL = 'http://localhost:5000/api';
+import AdminLayout from '../../layouts/AdminLayout';
 
 const OrderList = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [viewOpen, setViewOpen] = useState(false);
-  const [status, setStatus] = useState('');
-  const [statusLoading, setStatusLoading] = useState(false);
-  const [success, setSuccess] = useState('');
-  const [deleteError, setDeleteError] = useState('');
+  const [error, setError] = useState(null);
 
   const fetchOrders = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError('');
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/admin/orders`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setOrders(response.data);
+      console.log('Fetching orders...');
+      const { data } = await axios.get('/api/admin/orders');
+      console.log('Orders received:', data);
+      setOrders(Array.isArray(data) ? data : []);
+      setError(null);
     } catch (err) {
-      setError('Failed to load orders.');
-    } finally {
-      setLoading(false);
+      console.error('Error fetching orders:', err.response?.data || err);
+      setError(err.response?.data?.message || 'Failed to fetch orders');
+      setOrders([]);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
     fetchOrders();
   }, []);
 
-  const handleView = (order) => {
-    setSelectedOrder(order);
-    setStatus(order.status);
-    setViewOpen(true);
-  };
-
-  const handleStatusChange = (e) => {
-    setStatus(e.target.value);
-  };
-
-  const handleStatusUpdate = async () => {
-    if (!selectedOrder) return;
+  const handleStatusUpdate = async (orderId, newStatus) => {
     try {
-      setStatusLoading(true);
-      setSuccess('');
-      const token = localStorage.getItem('token');
-      await axios.put(`${API_BASE_URL}/admin/orders/${selectedOrder.id}/status`, { status }, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSuccess('Order status updated!');
-      setViewOpen(false);
-      fetchOrders();
+      await axios.put(`/api/admin/orders/${orderId}`, { status: newStatus });
+      await fetchOrders();
     } catch (err) {
-      setError('Failed to update order status.');
-    } finally {
-      setStatusLoading(false);
+      console.error('Error updating order status:', err.response?.data || err);
+      setError(err.response?.data?.message || 'Failed to update order status');
     }
   };
 
-  const handleDelete = async (orderId) => {
-    if (!window.confirm('Are you sure you want to delete this order?')) return;
-    try {
-      setDeleteError('');
-      setSuccess('');
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/admin/orders/${orderId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSuccess('Order deleted successfully!');
-      fetchOrders();
-    } catch (err) {
-      setDeleteError('Failed to delete order.');
-    }
+  const getStatusColor = (status) => {
+    const colors = {
+      'PENDING': 'warning',
+      'PROCESSING': 'info',
+      'SHIPPED': 'primary',
+      'DELIVERED': 'success',
+      'CANCELLED': 'error',
+      'COMPLETED': 'success'
+    };
+    return colors[status] || 'default';
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const calculateOrderTotal = (items = []) => {
+    return items.reduce((total, item) => total + (item.price * item.quantity), 0).toFixed(2);
   };
 
   return (
-    <Box sx={{ mt: 4 }}>
-      <Typography variant="h5" gutterBottom>
-        Order Management
-      </Typography>
-      {error && <Alert severity="error">{error}</Alert>}
-      {success && <Alert severity="success">{success}</Alert>}
-      {deleteError && <Alert severity="error">{deleteError}</Alert>}
+    <AdminLayout>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom color="primary">
+          Order Management
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+          Track and process customer orders
+        </Typography>
+      </Box>
+
       {loading ? (
-        <CircularProgress />
+        <Box display="flex" justifyContent="center" m={4}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 4 }}>{error}</Alert>
+      ) : orders.length === 0 ? (
+        <Alert severity="info">No orders found</Alert>
       ) : (
-        <TableContainer component={Paper} sx={{ mt: 2 }}>
-          <Table>
+        <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
+          <Table sx={{ minWidth: 650 }}>
             <TableHead>
-              <TableRow>
-                <TableCell>Order ID</TableCell>
-                <TableCell>User</TableCell>
-                <TableCell>Status</TableCell>
+              <TableRow sx={{ backgroundColor: 'background.default' }}>
+                <TableCell>Order Details</TableCell>
+                <TableCell>Customer</TableCell>
+                <TableCell>Items</TableCell>
                 <TableCell>Total</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell>{order.id}</TableCell>
-                  <TableCell>{order.user?.name || ''}</TableCell>
-                  <TableCell>{order.status}</TableCell>
-                  <TableCell>Ksh {order.total}</TableCell>
-                  <TableCell>{new Date(order.createdAt).toLocaleString()}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="View Details">
-                      <IconButton onClick={() => handleView(order)}>
-                        <VisibilityIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton onClick={() => handleDelete(order.id)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
+                <TableRow
+                  key={order.id}
+                  sx={{ '&:hover': { backgroundColor: 'action.hover' } }}
+                >
+                  <TableCell>
+                    <Typography variant="subtitle2" gutterBottom>
+                      #{order.id}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {formatDate(order.createdAt)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="subtitle2">
+                      {order.user?.name || 'Anonymous'}
+                    </Typography>
+                    {order.user?.email && (
+                      <Typography variant="body2" color="text.secondary">
+                        {order.user.email}
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <List dense disablePadding>
+                      {order.items?.map((item, index) => (
+                        <ListItem key={item.id || index} disablePadding>
+                          <ListItemText
+                            primary={
+                              <Typography variant="body2">
+                                {item.product?.name} ({item.quantity} × ${item.price})
+                              </Typography>
+                            }
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="subtitle2" color="primary.main">
+                      ${order.total || calculateOrderTotal(order.items)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ minWidth: 120 }}>
+                      <Select
+                        value={order.status}
+                        onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
+                        size="small"
+                        sx={{ 
+                          '& .MuiSelect-select': { 
+                            py: 0.5,
+                            display: 'flex',
+                            alignItems: 'center'
+                          }
+                        }}
+                        renderValue={(status) => (
+                          <Chip
+                            label={status}
+                            size="small"
+                            color={getStatusColor(status)}
+                          />
+                        )}
+                      >
+                        <MenuItem value="PENDING">Pending</MenuItem>
+                        <MenuItem value="PROCESSING">Processing</MenuItem>
+                        <MenuItem value="SHIPPED">Shipped</MenuItem>
+                        <MenuItem value="DELIVERED">Delivered</MenuItem>
+                        <MenuItem value="COMPLETED">Completed</MenuItem>
+                        <MenuItem value="CANCELLED">Cancelled</MenuItem>
+                      </Select>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -152,63 +193,7 @@ const OrderList = () => {
           </Table>
         </TableContainer>
       )}
-      {/* View Order Dialog */}
-      <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Order Details</DialogTitle>
-        <DialogContent>
-          {selectedOrder && (
-            <Box>
-              <Typography><b>Order ID:</b> {selectedOrder.id}</Typography>
-              <Typography><b>User:</b> {selectedOrder.user?.name} ({selectedOrder.user?.email}, {selectedOrder.user?.phone})</Typography>
-              <Typography><b>Status:</b> {selectedOrder.status}</Typography>
-              <Typography><b>Total:</b> Ksh {selectedOrder.total}</Typography>
-              <Typography><b>Date:</b> {new Date(selectedOrder.createdAt).toLocaleString()}</Typography>
-              <Typography sx={{ mt: 2 }}><b>Items:</b></Typography>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Product</TableCell>
-                    <TableCell>Quantity</TableCell>
-                    <TableCell>Price</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {selectedOrder.orderItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.product?.name}</TableCell>
-                      <TableCell>{item.quantity}</TableCell>
-                      <TableCell>Ksh {item.price}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle1"><b>Update Status:</b></Typography>
-                <Select
-                  value={status}
-                  onChange={handleStatusChange}
-                  sx={{ minWidth: 150, mr: 2 }}
-                >
-                  <MenuItem value="PENDING">PENDING</MenuItem>
-                  <MenuItem value="COMPLETED">COMPLETED</MenuItem>
-                  <MenuItem value="CANCELLED">CANCELLED</MenuItem>
-                </Select>
-                <Button
-                  variant="contained"
-                  onClick={handleStatusUpdate}
-                  disabled={statusLoading}
-                >
-                  Update
-                </Button>
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setViewOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+    </AdminLayout>
   );
 };
 

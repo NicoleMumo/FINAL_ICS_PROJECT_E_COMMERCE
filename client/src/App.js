@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useEffect } from "react"; // Import useEffect
+import React, { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,25 +8,32 @@ import {
 } from "react-router-dom";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
-import axios from "axios"; // Import axios here
+import axios from "axios";
+
+// Import ProtectedRoute
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 // General Home Page
 import Home from "./components/Home";
 
-// Farmer Portal Components (all located in src/components/farmer/)
+// Farmer Portal Components
 import Dashboard from "./components/farmer/Dashboard";
 import AddProductForm from "./components/farmer/AddProductForm";
 import Products from "./components/farmer/Products";
 import Inventory from "./components/farmer/Inventory";
 import Orders from "./components/farmer/Orders";
 import Analytics from "./components/farmer/Analytics";
-import EditProductForm from "./components/farmer/EditProductForm"; // Import EditProductForm
+import EditProductForm from "./components/farmer/EditProductForm";
 
 // Consumer Portal Components
 import ConsumerDashboard from "./components/consumer/Dashboard";
 
 // Admin Portal Components
-import AdminDashboard from './components/admin/AdminDashboard';
+import AdminDashboard from './components/admin/Dashboard';
+import UserList from './components/admin/UserList';
+import CategoryList from './components/admin/CategoryList';
+import OrderList from './components/admin/OrderList';
+import ProductList from './components/admin/ProductList';
 
 // Auth Components
 import Login from "./components/auth/Login";
@@ -53,62 +60,98 @@ const theme = createTheme({
   },
 });
 
-// --- AXIOS INTERCEPTOR CONFIGURATION ---
-// This will run once when the module is loaded.
+// Configure axios defaults
+axios.defaults.baseURL = 'http://localhost:5000'; // adjust this to match your server URL
+
+// Axios interceptor configuration
 axios.interceptors.request.use(
   config => {
-  const token = localStorage.getItem('token');
-    // If a token exists, add it to the Authorization header
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-  }
+    }
     return config;
   },
   error => {
-    // Do something with request error
     return Promise.reject(error);
   }
 );
-// --- END AXIOS INTERCEPTOR CONFIGURATION ---
 
 function App() {
-  // useEffect is not strictly needed for the interceptor here, as it's outside the component
-  // but it can be used for debugging or other global setup if required.
-  // For instance, you could log when the interceptor is set up:
   useEffect(() => {
     console.log('App component mounted. Axios interceptor should be active.');
   }, []);
 
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline />{" "}
-      {/* Provides a consistent baseline for CSS across browsers */}
+      <CssBaseline />
       <Router>
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
-          {/* Redirect for generic /dashboard to prevent direct access without role */}
           <Route path="/dashboard" element={<Navigate to="/login" replace />} />
 
-          {/* Farmer Portal Routes (now public) */}
-          <Route path="/farmer/dashboard" element={<Dashboard />} />
-          <Route path="/farmer/add-product" element={<AddProductForm />} />
-          <Route path="/farmer/products" element={<Products />} />
-          <Route path="/farmer/inventory" element={<Inventory />} />
-          <Route path="/farmer/orders" element={<Orders />} />
-          <Route path="/farmer/analytics" element={<Analytics />} />
-          <Route path="/farmer/products/edit/:productId" element={<EditProductForm />} /> {/* Edit Product Route */}
+          {/* Protected Farmer Routes */}
+          <Route 
+            path="/farmer/dashboard" 
+            element={<ProtectedRoute element={<Dashboard />} requiredRole="FARMER" />} 
+          />
+          <Route 
+            path="/farmer/add-product" 
+            element={<ProtectedRoute element={<AddProductForm />} requiredRole="FARMER" />} 
+          />
+          <Route 
+            path="/farmer/products" 
+            element={<ProtectedRoute element={<Products />} requiredRole="FARMER" />} 
+          />
+          <Route 
+            path="/farmer/inventory" 
+            element={<ProtectedRoute element={<Inventory />} requiredRole="FARMER" />} 
+          />
+          <Route 
+            path="/farmer/orders" 
+            element={<ProtectedRoute element={<Orders />} requiredRole="FARMER" />} 
+          />
+          <Route 
+            path="/farmer/analytics" 
+            element={<ProtectedRoute element={<Analytics />} requiredRole="FARMER" />} 
+          />
+          <Route 
+            path="/farmer/products/edit/:productId" 
+            element={<ProtectedRoute element={<EditProductForm />} requiredRole="FARMER" />} 
+          />
 
-          {/* Consumer Portal Route (now public) */}
-          <Route path="/consumer/dashboard" element={<ConsumerDashboard />} />
+          {/* Protected Consumer Routes */}
+          <Route 
+            path="/consumer/dashboard" 
+            element={<ProtectedRoute element={<ConsumerDashboard />} requiredRole="CONSUMER" />} 
+          />
 
-          {/* Admin Portal Route (now public) */}
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          {/* Protected Admin Routes */}
+          <Route 
+            path="/admin/dashboard" 
+            element={<ProtectedRoute element={<AdminDashboard />} requiredRole="ADMIN" />} 
+          />
+          <Route 
+            path="/admin/users" 
+            element={<ProtectedRoute element={<UserList />} requiredRole="ADMIN" />} 
+          />
+          <Route 
+            path="/admin/categories" 
+            element={<ProtectedRoute element={<CategoryList />} requiredRole="ADMIN" />} 
+          />
+          <Route 
+            path="/admin/orders" 
+            element={<ProtectedRoute element={<OrderList />} requiredRole="ADMIN" />} 
+          />
+          <Route 
+            path="/admin/products" 
+            element={<ProtectedRoute element={<ProductList />} requiredRole="ADMIN" />} 
+          />
 
-          {/* Catch-all route for any unhandled paths (404 Not Found) */}
+          {/* 404 Route */}
           <Route path="*" element={<div>404 Not Found</div>} />
         </Routes>
       </Router>

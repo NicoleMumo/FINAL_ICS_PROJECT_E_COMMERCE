@@ -1,7 +1,8 @@
 // server/src/index.js
-const express = require("express"); // This is the first and ONLY time express should be declared
+const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const { PrismaClient } = require('@prisma/client');
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
 const orderRoutes = require("./routes/orderRoutes");
@@ -10,6 +11,9 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const path = require("path");
+
+// Initialize Prisma Client
+const prisma = new PrismaClient();
 
 // If your .env is in 'server/' and index.js is in 'server/src/',
 // you need to go one level up to find the .env file.
@@ -38,6 +42,21 @@ app.use("/api", adminRoutes);
 
 app.get("/", (req, res) => {
   res.send("FarmDirect Backend API is running!");
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ 
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
+// Graceful shutdown
+process.on('beforeExit', async () => {
+  await prisma.$disconnect();
 });
 
 app.listen(PORT, () => {

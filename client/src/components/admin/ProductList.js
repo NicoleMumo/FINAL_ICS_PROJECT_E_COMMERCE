@@ -1,153 +1,148 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
-  Box,
-  Typography,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   IconButton,
+  Typography,
+  Box,
+  Chip,
   CircularProgress,
-  Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  Alert
+  Alert,
+  Avatar,
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-
-const API_BASE_URL = 'http://localhost:5000/api';
+import { Delete as DeleteIcon } from '@mui/icons-material';
+import AdminLayout from '../../layouts/AdminLayout';
 
 const ProductList = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [editOpen, setEditOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [editData, setEditData] = useState({ name: '', description: '', price: '', stock: '', categoryId: '' });
-  const [success, setSuccess] = useState('');
-  const [deleteError, setDeleteError] = useState('');
+  const [error, setError] = useState(null);
 
   const fetchProducts = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError('');
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/admin/products`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setProducts(response.data);
+      const { data } = await axios.get('/api/admin/products');
+      setProducts(Array.isArray(data) ? data : []);
+      setError(null);
     } catch (err) {
-      setError('Failed to load products.');
-    } finally {
-      setLoading(false);
+      console.error('Error fetching products:', err);
+      setError(err.response?.data?.message || 'Failed to fetch products');
+      setProducts([]);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  const handleEdit = (product) => {
-    setEditData({
-      name: product.name,
-      description: product.description,
-      price: product.price,
-      stock: product.stock,
-      categoryId: product.categoryId,
-    });
-    setSelectedProduct(product);
-    setEditOpen(true);
-  };
-
-  const handleEditChange = (e) => {
-    setEditData({ ...editData, [e.target.name]: e.target.value });
-  };
-
-  const handleEditSubmit = async () => {
-    try {
-      setDeleteError('');
-      setSuccess('');
-      const token = localStorage.getItem('token');
-      await axios.put(`${API_BASE_URL}/admin/products/${selectedProduct.id}`, editData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSuccess('Product updated successfully!');
-      setEditOpen(false);
-      fetchProducts();
-    } catch (err) {
-      setDeleteError('Failed to update product.');
-    }
-  };
-
   const handleDelete = async (productId) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    if (!window.confirm('Delete this product?')) return;
     try {
-      setDeleteError('');
-      setSuccess('');
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/admin/products/${productId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSuccess('Product deleted successfully!');
-      fetchProducts();
+      await axios.delete(`/api/admin/products/${productId}`);
+      await fetchProducts();
     } catch (err) {
-      setDeleteError('Failed to delete product.');
+      console.error('Error deleting product:', err);
+      setError(err.response?.data?.message || 'Failed to delete product');
     }
+  };
+
+  const formatPrice = (price) => {
+    return typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A';
   };
 
   return (
-    <Box sx={{ mt: 4 }}>
-      <Typography variant="h5" gutterBottom>
-        Product Management
-      </Typography>
-      {error && <Alert severity="error">{error}</Alert>}
-      {success && <Alert severity="success">{success}</Alert>}
-      {deleteError && <Alert severity="error">{deleteError}</Alert>}
+    <AdminLayout>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom color="primary">
+          Product Management
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+          View and manage all products in the system
+        </Typography>
+      </Box>
+
       {loading ? (
-        <CircularProgress />
+        <Box display="flex" justifyContent="center" m={4}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 4 }}>{error}</Alert>
+      ) : products.length === 0 ? (
+        <Alert severity="info">No products found</Alert>
       ) : (
-        <TableContainer component={Paper} sx={{ mt: 2 }}>
-          <Table>
+        <TableContainer component={Paper} sx={{ boxShadow: 3 }}>
+          <Table sx={{ minWidth: 650 }}>
             <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Description</TableCell>
+              <TableRow sx={{ backgroundColor: 'background.default' }}>
+                <TableCell>Product</TableCell>
                 <TableCell>Price</TableCell>
                 <TableCell>Stock</TableCell>
                 <TableCell>Category</TableCell>
-                <TableCell>Owner</TableCell>
+                <TableCell>Farmer</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>{product.name}</TableCell>
-                  <TableCell>{product.description}</TableCell>
-                  <TableCell>{product.price}</TableCell>
-                  <TableCell>{product.stock}</TableCell>
-                  <TableCell>{product.category?.name || ''}</TableCell>
-                  <TableCell>{product.farmer?.name || ''}</TableCell>
+                <TableRow
+                  key={product.id}
+                  sx={{ '&:hover': { backgroundColor: 'action.hover' } }}
+                >
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar
+                        src={product.imageUrl}
+                        alt={product.name}
+                        variant="rounded"
+                        sx={{ width: 40, height: 40 }}
+                      />
+                      <Box>
+                        <Typography variant="subtitle2">{product.name}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          ID: {product.id}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography color="primary.main" fontWeight="medium">
+                      {formatPrice(product.price)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={`${product.stock || 0} units`}
+                      color={product.stock > 0 ? 'success' : 'error'}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={product.category?.name || 'Uncategorized'}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {product.farmer?.name || 'Unknown'}
+                    </Typography>
+                  </TableCell>
                   <TableCell align="right">
-                    <Tooltip title="Edit">
-                      <IconButton onClick={() => handleEdit(product)}>
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton onClick={() => handleDelete(product.id)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
+                    <IconButton
+                      onClick={() => handleDelete(product.id)}
+                      color="error"
+                      size="small"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
@@ -155,59 +150,7 @@ const ProductList = () => {
           </Table>
         </TableContainer>
       )}
-      {/* Edit Product Dialog */}
-      <Dialog open={editOpen} onClose={() => setEditOpen(false)}>
-        <DialogTitle>Edit Product</DialogTitle>
-        <DialogContent>
-          <TextField
-            margin="dense"
-            label="Name"
-            name="name"
-            value={editData.name}
-            onChange={handleEditChange}
-            fullWidth
-          />
-          <TextField
-            margin="dense"
-            label="Description"
-            name="description"
-            value={editData.description}
-            onChange={handleEditChange}
-            fullWidth
-          />
-          <TextField
-            margin="dense"
-            label="Price"
-            name="price"
-            type="number"
-            value={editData.price}
-            onChange={handleEditChange}
-            fullWidth
-          />
-          <TextField
-            margin="dense"
-            label="Stock"
-            name="stock"
-            type="number"
-            value={editData.stock}
-            onChange={handleEditChange}
-            fullWidth
-          />
-          <TextField
-            margin="dense"
-            label="Category ID"
-            name="categoryId"
-            value={editData.categoryId}
-            onChange={handleEditChange}
-            fullWidth
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditOpen(false)}>Cancel</Button>
-          <Button onClick={handleEditSubmit} variant="contained">Save</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+    </AdminLayout>
   );
 };
 

@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require("../controllers/orderController");
-const authMiddleware = require("../middleware");
+const { verifyAuth } = require("../middleware");
 
 // Pesapal payment routes (if needed)
 // const { initiatePesapalPayment, handlePesapalIPN } = require('../controllers/orderController');
@@ -12,8 +12,8 @@ const authMiddleware = require("../middleware");
 
 // Order routes
 router.get("/orders", orderController.getOrders);
-router.get("/orders/my", authMiddleware, orderController.getMyOrders);
-router.patch("/orders/:id/status", authMiddleware, orderController.updateOrderStatus);
+router.get("/orders/my", verifyAuth, orderController.getMyOrders);
+router.patch("/orders/:id/status", verifyAuth, orderController.updateOrderStatus);
 router.post("/orders", orderController.createOrder);
 router.post("/payment-callback", orderController.pesapalCallback);
 
