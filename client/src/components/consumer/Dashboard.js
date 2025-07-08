@@ -550,6 +550,23 @@ const ConsumerDashboard = () => {
           <Typography variant="body1" sx={{ mb: 2 }}>
             <b>Email:</b> {userEmail || 'Not available'}
           </Typography>
+          {/* Shipping Address Section (moved here) */}
+          <Box sx={{ mb: 2, p: 2, background: '#f5f5f5', borderRadius: 2 }}>
+            <Typography variant="h6" sx={{ mb: 1 }}>Shipping Address</Typography>
+            <TextField
+              fullWidth
+              multiline
+              minRows={2}
+              value={shippingAddress}
+              onChange={e => setShippingAddress(e.target.value)}
+              placeholder="Enter your shipping address"
+              sx={{ mb: 1 }}
+            />
+            <Button variant="contained" onClick={handleAddressSave} sx={{ bgcolor: '#4CAF50', color: '#212121' }}>
+              Save Address
+            </Button>
+            {addressStatus && <Typography sx={{ ml: 2, color: addressStatus.includes('updated') ? 'green' : 'red' }}>{addressStatus}</Typography>}
+          </Box>
           <Button 
             variant="contained" 
             color="primary" 
@@ -561,24 +578,6 @@ const ConsumerDashboard = () => {
           </Button>
         </Box>
       </Drawer>
-
-      {/* Shipping Address Section */}
-      <Box sx={{ mb: 4, p: 2, background: '#f5f5f5', borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>Shipping Address</Typography>
-        <TextField
-          fullWidth
-          multiline
-          minRows={2}
-          value={shippingAddress}
-          onChange={e => setShippingAddress(e.target.value)}
-          placeholder="Enter your shipping address"
-          sx={{ mb: 1 }}
-        />
-        <Button variant="contained" onClick={handleAddressSave} sx={{ bgcolor: '#4CAF50', color: '#212121' }}>
-          Save Address
-        </Button>
-        {addressStatus && <Typography sx={{ ml: 2, color: addressStatus.includes('updated') ? 'green' : 'red' }}>{addressStatus}</Typography>}
-      </Box>
 
       <Snackbar open={!!checkoutStatus} autoHideDuration={5000} onClose={() => setCheckoutStatus('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         {checkoutStatus === 'success' ? (

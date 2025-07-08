@@ -306,7 +306,7 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ message: 'Invalid order data.' });
     }
     if (!shippingAddress || shippingAddress.trim() === "") {
-      return res.status(400).json({ message: 'Shipping address is required.' });
+      return res.status(400).json({ message: 'Shipping address is required.Find it in your profile' });
     }
     // Get user and cart details
     const user = await prisma.user.findUnique({ where: { id: userId } });
