@@ -284,11 +284,25 @@ exports.deleteUser = async (req, res) => {
 exports.getAllProducts = async (req, res) => {
   try {
     const products = await prisma.product.findMany({
-      include: { category: { select: { name: true } }, farmer: { select: { name: true, email: true } } },
+      include: {
+        category: true,
+        farmer: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
     });
+
     res.json(products);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching products', error: error.message });
+    console.error('Error getting all products:', error);
+    res.status(500).json({ message: 'Error getting products', error: error.message });
   }
 };
 
@@ -317,15 +331,24 @@ exports.deleteProduct = async (req, res) => {
 // --- ORDER MANAGEMENT ---
 exports.getAllOrders = async (req, res) => {
   try {
-    const limit = req.query.limit ? parseInt(req.query.limit) : undefined;
-    
     const orders = await prisma.order.findMany({
-      take: limit,
       include: {
-        user: true,
-        items: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        orderItems: {
           include: {
-            product: true
+            product: {
+              select: {
+                id: true,
+                name: true,
+                price: true
+              }
+            }
           }
         }
       },
@@ -334,14 +357,16 @@ exports.getAllOrders = async (req, res) => {
       }
     });
 
-    res.json(orders);
+    // Transform the response to match the frontend expectations
+    const transformedOrders = orders.map(order => ({
+      ...order,
+      items: order.orderItems
+    }));
+
+    res.json(transformedOrders);
   } catch (error) {
-    console.error('Error in getAllOrders:', error);
-    res.status(500).json({ 
-      message: 'Error fetching orders',
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    console.error('Error getting all orders:', error);
+    res.status(500).json({ message: 'Error getting orders', error: error.message });
   }
 };
 
@@ -387,10 +412,30 @@ exports.deleteOrder = async (req, res) => {
 // --- CATEGORY MANAGEMENT ---
 exports.getAllCategories = async (req, res) => {
   try {
-    const categories = await prisma.category.findMany();
-    res.json(categories);
+    const categories = await prisma.category.findMany({
+      include: {
+        products: {
+          select: {
+            id: true
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    });
+
+    // Add product count to each category
+    const categoriesWithCount = categories.map(category => ({
+      ...category,
+      productCount: category.products.length,
+      products: undefined // Remove the products array from the response
+    }));
+
+    res.json(categoriesWithCount);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching categories', error: error.message });
+    console.error('Error getting all categories:', error);
+    res.status(500).json({ message: 'Error getting categories', error: error.message });
   }
 };
 

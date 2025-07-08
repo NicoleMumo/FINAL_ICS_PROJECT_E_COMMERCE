@@ -22,7 +22,16 @@ dotenv.config({ path: "../.env" });
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Configure CORS with specific options
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL // Use environment variable in production
+    : 'http://localhost:3000', // Allow React dev server in development
+  credentials: true, // Allow cookies if you're using them
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // Serve static files from uploads
@@ -38,7 +47,7 @@ app.use("/api", orderRoutes);
 app.use("/api", categoryRoutes);
 app.use("/api", dashboardRoutes);
 app.use("/api", analyticsRoutes);
-app.use("/api", adminRoutes);
+app.use("/api", adminRoutes); // Changed back to /api since we'll update the routes
 
 app.get("/", (req, res) => {
   res.send("FarmDirect Backend API is running!");
