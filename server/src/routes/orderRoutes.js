@@ -13,6 +13,7 @@ const { verifyAuth } = require("../middleware");
 // Order routes
 router.get("/orders", orderController.getOrders);
 router.get("/orders/my", verifyAuth, orderController.getMyOrders);
+router.get("/orders/my-consumer", verifyAuth, orderController.getMyConsumerOrders);
 router.patch("/orders/:id/status", verifyAuth, orderController.updateOrderStatus);
 router.post("/orders", orderController.createOrder);
 router.post("/payment-callback", orderController.pesapalCallback);

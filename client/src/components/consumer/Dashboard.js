@@ -21,7 +21,9 @@ import {
   Link,
   Drawer,
   Snackbar,
-  Alert
+  Alert,
+  Chip,
+  Divider
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -62,6 +64,7 @@ const ConsumerDashboard = () => {
   const [addressStatus, setAddressStatus] = useState("");
   const [cartError, setCartError] = useState("");
   const [showInStockOnly, setShowInStockOnly] = useState(false);
+  const [orders, setOrders] = useState([]);
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -152,6 +155,25 @@ const ConsumerDashboard = () => {
       fetchProducts();
     }
   }, [checkoutStatus]);
+
+  // Fetch consumer orders
+  const fetchOrders = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('/api/orders/my-consumer', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setOrders(res.data);
+    } catch (err) {
+      // Optionally handle error
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // --- Combined Filtering and Sorting Logic ---
   let sortedProducts = [...products];
@@ -646,6 +668,46 @@ const ConsumerDashboard = () => {
           <Alert severity="error" onClose={() => setCartError('')}>{cartError}</Alert>
         </Snackbar>
       )}
+
+      {/* Order History Section */}
+      <Box sx={{ mt: 6, mb: 4 }}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#4CAF50', mb: 2 }}>
+          My Orders
+        </Typography>
+        {orders.length === 0 ? (
+          <Typography>No previous orders found.</Typography>
+        ) : (
+          <Paper sx={{ p: 2, boxShadow: 2 }}>
+            {orders.map(order => (
+              <Box key={order.id} sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="subtitle1">Order #{order.id}</Typography>
+                  <Chip label={order.status} color={
+                    order.status === 'COMPLETED' ? 'success' :
+                    order.status === 'DELIVERED' ? 'primary' :
+                    order.status === 'SHIPPED' ? 'info' :
+                    order.status === 'PROCESSING' ? 'warning' :
+                    order.status === 'CANCELLED' ? 'error' :
+                    'default'
+                  } />
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  Placed: {new Date(order.createdAt).toLocaleString()}
+                </Typography>
+                <Divider sx={{ my: 1 }} />
+                <Box>
+                  {order.items.map(item => (
+                    <Box key={item.id} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography>{item.product?.name} x {item.quantity}</Typography>
+                      <Typography>Ksh{item.price}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            ))}
+          </Paper>
+        )}
+      </Box>
     </Box>
   );
 };

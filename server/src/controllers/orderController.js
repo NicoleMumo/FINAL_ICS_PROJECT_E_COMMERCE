@@ -386,3 +386,22 @@ exports.pesapalCallback = async (req, res) => {
     res.status(500).json({ message: 'Failed to process callback.' });
   }
 };
+
+exports.getMyConsumerOrders = async (req, res) => {
+  try {
+    const userId = req.userData.userId;
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      include: {
+        items: {
+          include: { product: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(orders);
+  } catch (error) {
+    console.error('Error fetching consumer orders:', error);
+    res.status(500).json({ message: 'Failed to fetch your orders.' });
+  }
+};
