@@ -482,7 +482,7 @@ const ConsumerDashboard = () => {
         <Grid item xs={12} md={9}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#4CAF50', mb: 2 }}>
-              {userName ? `Welcome back: ${userName}` : "Welcome back!"}
+              {userName ? `Welcome back ${userName}` : "Welcome back!"}
             </Typography>
             <FormControl variant="outlined" size="small">
               <InputLabel sx={{ color: '#212121' }}>Sort by</InputLabel>
