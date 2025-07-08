@@ -78,12 +78,15 @@ const ConsumerDashboard = () => {
   useEffect(() => {
     // Get user name from localStorage (set during login)
     const storedUser = localStorage.getItem('user');
+    console.log('Stored user:', storedUser);
     if (storedUser) {
       try {
         const userObj = JSON.parse(storedUser);
+        console.log('Parsed user:', userObj);
         setUserName(userObj.name || "");
         setUserEmail(userObj.email || "");
-      } catch {
+      } catch (error) {
+        console.error('Error parsing user:', error);
         setUserName("");
         setUserEmail("");
       }
@@ -196,6 +199,19 @@ const ConsumerDashboard = () => {
     }
   };
 
+  const handleLogout = () => {
+    try {
+      // Clear all storage
+      localStorage.clear();
+      // Close the profile drawer
+      setProfileDrawerOpen(false);
+      // Navigate to login
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
+
   if (loading) return <Typography sx={{ p: 4 }}>Loading products...</Typography>;
   if (fetchError) return <Typography color="error" sx={{ p: 4 }}>{fetchError}</Typography>;
 
@@ -264,7 +280,13 @@ const ConsumerDashboard = () => {
                 </Box>
               )}
             </IconButton>
-            <IconButton sx={{ color: '#212121' }} onClick={() => setProfileDrawerOpen(true)}>
+            <IconButton 
+              sx={{ color: '#212121' }} 
+              onClick={() => {
+                console.log('Opening profile drawer');
+                setProfileDrawerOpen(true);
+              }}
+            >
               <PersonIcon />
             </IconButton>
           </Box>
@@ -474,12 +496,36 @@ const ConsumerDashboard = () => {
         </Box>
       </Drawer>
 
-      <Drawer anchor="right" open={profileDrawerOpen} onClose={() => setProfileDrawerOpen(false)}>
-        <Box sx={{ width: 300, p: 3 }}>
-          <Typography variant="h6" sx={{ mb: 2 }}>Profile</Typography>
-          <Typography variant="body1" sx={{ mb: 1 }}><b>Email:</b> {userEmail}</Typography>
-          <Button variant="outlined" color="primary" fullWidth sx={{ mt: 2 }} disabled>
-            Forgot Password (Coming Soon)
+      {/* Profile Drawer */}
+      <Drawer 
+        anchor="right" 
+        open={profileDrawerOpen} 
+        onClose={() => setProfileDrawerOpen(false)}
+        PaperProps={{
+          sx: { width: 300 }
+        }}
+      >
+        <Box sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Profile</Typography>
+            <IconButton onClick={() => setProfileDrawerOpen(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          <Typography variant="body1" sx={{ mb: 1 }}>
+            <b>Name:</b> {userName || 'Not available'}
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            <b>Email:</b> {userEmail || 'Not available'}
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            fullWidth 
+            onClick={handleLogout}
+            sx={{ mt: 2 }}
+          >
+            Log Out
           </Button>
         </Box>
       </Drawer>

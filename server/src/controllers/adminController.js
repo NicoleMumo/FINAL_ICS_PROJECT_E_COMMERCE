@@ -331,6 +331,7 @@ exports.deleteProduct = async (req, res) => {
 // --- ORDER MANAGEMENT ---
 exports.getAllOrders = async (req, res) => {
   try {
+    console.log('Fetching orders from database...');
     const orders = await prisma.order.findMany({
       include: {
         user: {
@@ -340,6 +341,51 @@ exports.getAllOrders = async (req, res) => {
             email: true
           }
         },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Transform orders to match frontend expectations
+    const transformedOrders = orders.map(order => ({
+      id: order.id,
+      createdAt: order.createdAt,
+      status: order.status,
+      total: order.total,
+      user: order.user,
+      items: order.items.map(item => ({
+        id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        product: item.product
+      }))
+    }));
+
+    console.log(`Found ${transformedOrders.length} orders`);
+    res.json(transformedOrders);
+  } catch (error) {
+    console.error('Error getting all orders:', error);
+    res.status(500).json({ message: 'Error getting orders', error: error.message });
+  }
+};
+
+exports.getOrderById = async (req, res) => {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.id }, // Remove Number() conversion since id is a string
+      include: {
+        user: { select: { name: true, email: true, phone: true } },
         orderItems: {
           include: {
             product: {
@@ -351,33 +397,7 @@ exports.getAllOrders = async (req, res) => {
             }
           }
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
       }
-    });
-
-    // Transform the response to match the frontend expectations
-    const transformedOrders = orders.map(order => ({
-      ...order,
-      items: order.orderItems
-    }));
-
-    res.json(transformedOrders);
-  } catch (error) {
-    console.error('Error getting all orders:', error);
-    res.status(500).json({ message: 'Error getting orders', error: error.message });
-  }
-};
-
-exports.getOrderById = async (req, res) => {
-  try {
-    const order = await prisma.order.findUnique({
-      where: { id: Number(req.params.id) },
-      include: {
-        user: { select: { name: true, email: true, phone: true } },
-        orderItems: { include: { product: { select: { name: true } } } },
-      },
     });
     if (!order) return res.status(404).json({ message: 'Order not found' });
     res.json(order);
@@ -390,7 +410,7 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const order = await prisma.order.update({
-      where: { id: Number(req.params.id) },
+      where: { id: req.params.id }, // Remove Number() conversion
       data: { status },
     });
     res.json(order);
@@ -401,8 +421,8 @@ exports.updateOrderStatus = async (req, res) => {
 
 exports.deleteOrder = async (req, res) => {
   try {
-    await prisma.orderItem.deleteMany({ where: { orderId: Number(req.params.id) } });
-    await prisma.order.delete({ where: { id: Number(req.params.id) } });
+    await prisma.orderItem.deleteMany({ where: { orderId: req.params.id } }); // Remove Number() conversion
+    await prisma.order.delete({ where: { id: req.params.id } }); // Remove Number() conversion
     res.json({ message: 'Order deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting order', error: error.message });
