@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React from "react";
+import { Link } from "react-router-dom";
 import {
   Grid,
   Card,
@@ -7,42 +7,56 @@ import {
   Typography,
   Box,
   useTheme,
-} from '@mui/material';
+} from "@mui/material";
 import {
   People as PeopleIcon,
   Inventory as InventoryIcon,
   Category as CategoryIcon,
   ShoppingBasket as ShoppingBasketIcon,
-} from '@mui/icons-material';
-import AdminLayout from '../../layouts/AdminLayout';
+} from "@mui/icons-material";
+import AdminLayout from "../../layouts/AdminLayout";
 
 export default function Dashboard() {
   const theme = useTheme();
 
   const cards = [
     {
-      title: 'Manage Users',
-      icon: <PeopleIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />,
-      description: 'View and manage user accounts',
-      link: '/admin/users',
+      title: "Manage Users",
+      icon: (
+        <PeopleIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />
+      ),
+      description: "View and manage user accounts",
+      link: "/admin/users",
     },
     {
-      title: 'Manage Products',
-      icon: <InventoryIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />,
-      description: 'Add, edit, and remove products',
-      link: '/admin/products',
+      title: "Manage Products",
+      icon: (
+        <InventoryIcon
+          sx={{ fontSize: 40, color: theme.palette.primary.main }}
+        />
+      ),
+      description: "Add, edit, and remove products",
+      link: "/admin/products",
     },
     {
-      title: 'Manage Categories',
-      icon: <CategoryIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />,
-      description: 'Organize product categories',
-      link: '/admin/categories',
+      title: "Manage Categories",
+      icon: (
+        <CategoryIcon
+          sx={{ fontSize: 40, color: theme.palette.primary.main }}
+        />
+      ),
+      description: "Organize product categories",
+      link: "/admin/categories",
     },
     {
-      title: 'Manage Orders',
-      icon: <ShoppingBasketIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />,
-      description: 'Track and process orders',
-      link: '/admin/orders',
+      title: "Manage Orders",
+      icon: (
+        <ShoppingBasketIcon
+          sx={{ fontSize: 40, color: theme.palette.primary.main }}
+        />
+      ),
+      description: "Track and process orders",
+      link: "/admin/orders",
     },
   ];
 
@@ -64,40 +78,49 @@ export default function Dashboard() {
               component={Link}
               to={card.link}
               sx={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                textDecoration: 'none',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                textDecoration: "none",
+                transition: "transform 0.2s, box-shadow 0.2s",
+                "&:hover": {
+                  transform: "translateY(-4px)",
                   boxShadow: theme.shadows[4],
                   backgroundColor: theme.palette.primary.light,
-                  '& .MuiSvgIcon-root': {
-                    transform: 'scale(1.1)',
+                  "& .MuiSvgIcon-root": {
+                    transform: "scale(1.1)",
                   },
                 },
               }}
             >
-              <CardContent sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-                p: 3,
-              }}>
-                <Box sx={{
-                  mb: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  '& .MuiSvgIcon-root': {
-                    transition: 'transform 0.2s',
-                  },
-                }}>
+              <CardContent
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  textAlign: "center",
+                  p: 3,
+                }}
+              >
+                <Box
+                  sx={{
+                    mb: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    "& .MuiSvgIcon-root": {
+                      transition: "transform 0.2s",
+                    },
+                  }}
+                >
                   {card.icon}
                 </Box>
-                <Typography variant="h6" component="h2" color="text.primary" gutterBottom>
+                <Typography
+                  variant="h6"
+                  component="h2"
+                  color="text.primary"
+                  gutterBottom
+                >
                   {card.title}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">

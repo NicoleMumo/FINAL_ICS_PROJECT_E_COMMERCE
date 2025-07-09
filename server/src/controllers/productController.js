@@ -204,7 +204,8 @@ exports.deleteProduct = async (req, res) => {
     // Admins can delete any product. Farmers can only delete their own.
     if (role !== "ADMIN" && product.farmerId !== userId) {
       return res.status(403).json({
-        message: "Forbidden: You do not have permission to delete this product.",
+        message:
+          "Forbidden: You do not have permission to delete this product.",
       });
     }
 
@@ -234,6 +235,93 @@ exports.getMyProducts = async (req, res) => {
   } catch (error) {
     console.error("Error fetching farmer's products:", error);
     res.status(500).json({ message: "Failed to fetch your products." });
+  }
+};
+
+// Add a new product (used by Admin)
+exports.adminAddProduct = async (req, res) => {
+  try {
+    if (req.userData.role !== "ADMIN") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Only admins can perform this action." });
+    }
+
+    const { name, description, price, stock, categoryId, farmerId } = req.body;
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
+    if (
+      !name ||
+      !description ||
+      !price ||
+      stock === undefined ||
+      !categoryId ||
+      !farmerId
+    ) {
+      return res
+        .status(400)
+        .json({ message: "All required fields must be provided." });
+    }
+
+    const newProduct = await prisma.product.create({
+      data: {
+        name,
+        description,
+        price: parseFloat(price),
+        stock: parseInt(stock),
+        imageUrl: imageUrl || null,
+        categoryId: parseInt(categoryId),
+        farmerId: parseInt(farmerId),
+      },
+    });
+    res
+      .status(201)
+      .json({ message: "Product added successfully!", product: newProduct });
+  } catch (error) {
+    console.error("Error adding product by admin:", error);
+    res.status(500).json({ message: "Failed to add product." });
+  }
+};
+
+// Update product details by Admin
+exports.adminUpdateProduct = async (req, res) => {
+  try {
+    if (req.userData.role !== "ADMIN") {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: Only admins can perform this action." });
+    }
+
+    const { id } = req.params;
+    const { name, description, price, stock, categoryId, removeCurrentImage } =
+      req.body;
+
+    const updateData = {
+      ...(name && { name }),
+      ...(description && { description }),
+      ...(price && { price: parseFloat(price) }),
+      ...(stock && { stock: parseInt(stock) }),
+      ...(categoryId && { categoryId: parseInt(categoryId) }),
+    };
+
+    if (req.file) {
+      updateData.imageUrl = `/uploads/${req.file.filename}`;
+    } else if (removeCurrentImage === "true") {
+      updateData.imageUrl = null;
+    }
+
+    const updatedProduct = await prisma.product.update({
+      where: { id },
+      data: updateData,
+    });
+
+    res.json({
+      message: "Product updated successfully!",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error("Error updating product by admin:", error);
+    res.status(500).json({ message: "Failed to update product." });
   }
 };
 

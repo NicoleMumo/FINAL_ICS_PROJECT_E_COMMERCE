@@ -276,7 +276,11 @@ async function main() {
         items: {
           create: [
             {
-              productId: (await prisma.product.findFirst({ where: { name: "Red Apples" } })).id,
+              productId: (
+                await prisma.product.findFirst({
+                  where: { name: "Red Apples" },
+                })
+              ).id,
               quantity: 2,
               price: 120.0,
             },
@@ -292,7 +296,11 @@ async function main() {
         items: {
           create: [
             {
-              productId: (await prisma.product.findFirst({ where: { name: "Spinach Bunch" } })).id,
+              productId: (
+                await prisma.product.findFirst({
+                  where: { name: "Spinach Bunch" },
+                })
+              ).id,
               quantity: 2,
               price: 80.0,
             },
@@ -310,7 +318,11 @@ async function main() {
         items: {
           create: [
             {
-              productId: (await prisma.product.findFirst({ where: { name: "Green Beans" } })).id,
+              productId: (
+                await prisma.product.findFirst({
+                  where: { name: "Green Beans" },
+                })
+              ).id,
               quantity: 3,
               price: 80.0,
             },
@@ -326,7 +338,9 @@ async function main() {
         items: {
           create: [
             {
-              productId: (await prisma.product.findFirst({ where: { name: "Tomatoes" } })).id,
+              productId: (
+                await prisma.product.findFirst({ where: { name: "Tomatoes" } })
+              ).id,
               quantity: 2,
               price: 45.0,
             },
@@ -344,7 +358,11 @@ async function main() {
         items: {
           create: [
             {
-              productId: (await prisma.product.findFirst({ where: { name: "Chicken Eggs" } })).id,
+              productId: (
+                await prisma.product.findFirst({
+                  where: { name: "Chicken Eggs" },
+                })
+              ).id,
               quantity: 10,
               price: 30.0,
             },
@@ -360,7 +378,9 @@ async function main() {
         items: {
           create: [
             {
-              productId: (await prisma.product.findFirst({ where: { name: "Mangoes" } })).id,
+              productId: (
+                await prisma.product.findFirst({ where: { name: "Mangoes" } })
+              ).id,
               quantity: 1,
               price: 150.0,
             },
@@ -376,30 +396,30 @@ async function main() {
   console.log("Farmer One: farmer1@example.com / farmer123");
   console.log("Farmer Two: farmer2@example.com / farmer123");
   console.log("Farmer Three: farmer3@example.com / farmer123");
-  
+
   console.log("\nConsumers:");
   console.log("Consumer One: consumer1@example.com / consumer123");
   console.log("Consumer Two: consumer2@example.com / consumer123");
   console.log("Consumer Three: consumer3@example.com / consumer123");
-  
+
   console.log("\nAdmins:");
   console.log("Admin: admin@example.com / admin123");
   console.log("Admin One: admin1@example.com / admin123");
-  
+
   console.log("\nCategories:");
   console.log("Fruits, Vegetables, Dairy, Meat, Grains");
-  
+
   console.log("\nProducts:");
   console.log("Farmer One's Products:");
   console.log("- Red Apples (Ksh 120)");
   console.log("- Spinach Bunch (Ksh 60)");
   console.log("- Fresh Milk (Ksh 50)");
-  
+
   console.log("\nFarmer Two's Products:");
   console.log("- Green Beans (Ksh 80)");
   console.log("- Chicken Eggs (Ksh 30)");
   console.log("- Maize Flour (Ksh 120)");
-  
+
   console.log("\nFarmer Three's Products:");
   console.log("- Mangoes (Ksh 150)");
   console.log("- Beef Steak (Ksh 500)");

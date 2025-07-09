@@ -23,7 +23,9 @@ router.post(
     productController.upload(req, res, function (err) {
       if (err) {
         // Multer error
-        return res.status(400).json({ message: "Multer error: " + err.message });
+        return res
+          .status(400)
+          .json({ message: "Multer error: " + err.message });
       }
       next();
     });
@@ -40,11 +42,23 @@ router.put(
 
 router.delete("/products/:id", verifyAuth, productController.deleteProduct);
 
-// Route for updating only stock (more efficient for inventory management)
-router.patch(
-  "/products/:id/stock",
+// Admin routes for products
+router.post(
+  "/admin/products",
   verifyAuth,
-  productController.updateStock
+  productController.upload,
+  productController.adminAddProduct
 );
+router.put(
+  "/admin/products/:id",
+  verifyAuth,
+  productController.upload,
+  productController.adminUpdateProduct
+);
+
+// Route for updating only stock (more efficient for inventory management)
+router.patch("/products/:id/stock", verifyAuth, productController.updateStock);
+
+
 
 module.exports = router;
