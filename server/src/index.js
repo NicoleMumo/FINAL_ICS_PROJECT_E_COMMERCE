@@ -30,7 +30,7 @@ app.use(
         ? process.env.FRONTEND_URL // Use environment variable in production
         : "http://localhost:3000", // Allow React dev server in development
     credentials: true, // Allow cookies if you're using them
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );

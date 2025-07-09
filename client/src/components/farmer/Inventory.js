@@ -94,7 +94,9 @@ const Inventory = () => {
       );
 
       setProducts(
-        products.map((p) => (p.id === productId ? response.data.product : p))
+        products.map((p) =>
+          p.id === productId ? response.data.product : p
+        )
       );
       handleCancelEdit();
     } catch (err) {

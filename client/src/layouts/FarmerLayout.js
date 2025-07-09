@@ -183,11 +183,17 @@ const FarmerLayout = ({ children, title, subtitle, showAddProduct = true }) => {
                 </Button>
               )}
               <Button
-                variant="outlined"
-                color="secondary"
+                variant="contained"
                 startIcon={<LogoutIcon />}
                 onClick={handleSignOut}
-                sx={{ ml: 1 }}
+                sx={{
+                  backgroundColor: "#000000", // Black background
+                  color: "#FFFFFF", // White text
+                  "&:hover": {
+                    backgroundColor: "#333333", // Darker grey on hover
+                  },
+                  ml: 1,
+                }}
               >
                 Sign Out
               </Button>

@@ -39,9 +39,13 @@ exports.getProducts = async (req, res) => {
 // Get a single product by ID
 exports.getProductById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const productId = parseInt(req.params.id, 10);
+    if (isNaN(productId)) {
+      return res.status(400).json({ message: "Invalid product ID." });
+    }
+
     const product = await prisma.product.findUnique({
-      where: { id },
+      where: { id: productId },
       include: { category: true, farmer: { select: { id: true, name: true } } },
     });
 
@@ -131,10 +135,14 @@ exports.addProduct = async (req, res) => {
 // Update product details (e.g., stock from Inventory.js)
 exports.updateProduct = async (req, res) => {
   try {
-    const { id } = req.params;
+    const productId = parseInt(req.params.id, 10);
     const farmerId = parseInt(req.userData.userId, 10);
 
-    const product = await prisma.product.findUnique({ where: { id } });
+    if (isNaN(productId)) {
+      return res.status(400).json({ message: "Invalid product ID." });
+    }
+
+    const product = await prisma.product.findUnique({ where: { id: productId } });
 
     if (!product) {
       return res.status(404).json({ message: "Product not found." });
@@ -164,7 +172,7 @@ exports.updateProduct = async (req, res) => {
     }
 
     const updatedProduct = await prisma.product.update({
-      where: { id },
+      where: { id: productId },
       data: updateData,
     });
 
@@ -189,12 +197,16 @@ exports.updateProduct = async (req, res) => {
 // Delete a product
 exports.deleteProduct = async (req, res) => {
   try {
-    const { id } = req.params;
+    const productId = parseInt(req.params.id, 10);
     const { role } = req.userData;
     const userId = parseInt(req.userData.userId, 10);
 
+    if (isNaN(productId)) {
+      return res.status(400).json({ message: "Invalid product ID." });
+    }
+
     const product = await prisma.product.findUnique({
-      where: { id },
+      where: { id: productId },
     });
 
     if (!product) {
@@ -210,7 +222,7 @@ exports.deleteProduct = async (req, res) => {
     }
 
     await prisma.product.delete({
-      where: { id },
+      where: { id: productId },
     });
     res.status(204).json({ message: "Product deleted successfully." });
   } catch (error) {
@@ -328,9 +340,13 @@ exports.adminUpdateProduct = async (req, res) => {
 // Update only the stock of a product
 exports.updateStock = async (req, res) => {
   try {
-    const { id } = req.params;
+    const productId = parseInt(req.params.id, 10);
     const { stock } = req.body;
     const farmerId = parseInt(req.userData.userId, 10);
+
+    if (isNaN(productId)) {
+      return res.status(400).json({ message: "Invalid product ID." });
+    }
 
     if (stock === undefined || isNaN(parseInt(stock)) || parseInt(stock) < 0) {
       return res
@@ -338,7 +354,7 @@ exports.updateStock = async (req, res) => {
         .json({ message: "A valid, non-negative stock quantity is required." });
     }
 
-    const product = await prisma.product.findUnique({ where: { id } });
+    const product = await prisma.product.findUnique({ where: { id: productId } });
 
     if (!product) {
       return res.status(404).json({ message: "Product not found." });
@@ -351,9 +367,12 @@ exports.updateStock = async (req, res) => {
     }
 
     const updatedProduct = await prisma.product.update({
-      where: { id },
+      where: { id: productId },
       data: {
         stock: parseInt(stock),
+      },
+      include: {
+        category: true, // Include category to match frontend data structure
       },
     });
 

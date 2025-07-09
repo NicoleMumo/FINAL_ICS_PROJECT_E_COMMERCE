@@ -33,7 +33,7 @@ router.post(
   productController.addProduct
 );
 
-router.put(
+router.patch(
   "/products/:id",
   verifyAuth,
   productController.upload,
