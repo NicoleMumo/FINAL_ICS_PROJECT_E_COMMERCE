@@ -79,26 +79,38 @@ exports.getDashboardSummary = async (req, res) => {
       `,
     ]);
 
+    // Convert BigInt to Number for revenue and lastMonthRevenue
+    const revenueTotal = revenue._sum.total ? Number(revenue._sum.total) : 0;
+    const lastMonthRevenueTotal = lastMonthRevenue._sum.total ? Number(lastMonthRevenue._sum.total) : 0;
+
     // Calculate growth percentages
     const userGrowthPercent = (
-      ((totalUsers - lastMonthUsers) / lastMonthUsers) *
-      100
+      ((totalUsers - lastMonthUsers) / (lastMonthUsers || 1)) * 100
     ).toFixed(1);
     const orderGrowthPercent = (
-      ((totalOrders - lastMonthOrders) / lastMonthOrders) *
-      100
+      ((totalOrders - lastMonthOrders) / (lastMonthOrders || 1)) * 100
     ).toFixed(1);
     const revenueGrowthPercent = (
-      (((revenue._sum.total || 0) - (lastMonthRevenue._sum.total || 0)) /
-        (lastMonthRevenue._sum.total || 1)) *
-      100
+      ((revenueTotal - lastMonthRevenueTotal) / (lastMonthRevenueTotal || 1)) * 100
     ).toFixed(1);
 
-    res.json({
+    // Helper to recursively convert BigInt to Number
+    function convertBigInt(obj) {
+      if (typeof obj === 'bigint') return Number(obj);
+      if (Array.isArray(obj)) return obj.map(convertBigInt);
+      if (obj && typeof obj === 'object') {
+        return Object.fromEntries(
+          Object.entries(obj).map(([k, v]) => [k, convertBigInt(v)])
+        );
+      }
+      return obj;
+    }
+
+    res.json(convertBigInt({
       totalUsers,
       totalProducts,
       totalOrders,
-      revenue: revenue._sum.total || 0,
+      revenue: revenueTotal,
       growth: {
         users: userGrowthPercent,
         orders: orderGrowthPercent,
@@ -106,7 +118,7 @@ exports.getDashboardSummary = async (req, res) => {
       },
       userGrowth,
       transactionVolume,
-    });
+    }));
   } catch (error) {
     console.error("Error getting dashboard summary:", error);
     res.status(500).json({
@@ -287,9 +299,12 @@ exports.getAllUsers = async (req, res) => {
 exports.getUserById = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ message: "Invalid or missing user id." });
+    }
     const user = await prisma.user.findUnique({
       where: {
-        id: parseInt(id, 10)
+        id: Number(id)
       },
       select: {
         id: true,

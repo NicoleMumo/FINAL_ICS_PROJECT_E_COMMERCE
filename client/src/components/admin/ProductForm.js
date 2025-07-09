@@ -76,13 +76,27 @@ const ProductForm = ({ open, onClose, onSuccess, product }) => {
     setIsSubmitting(true);
     setError(null);
 
+    // Validate required fields
+    if (!formData.categoryId || !formData.farmerId) {
+      setError('Please select both a category and a farmer.');
+      setIsSubmitting(false);
+      return;
+    }
+
     const apiEndpoint = product
       ? `/api/admin/products/${product.id}`
       : '/api/admin/products';
     const method = product ? 'put' : 'post';
 
+    // Convert IDs to numbers before sending
+    const payload = {
+      ...formData,
+      categoryId: Number(formData.categoryId),
+      farmerId: Number(formData.farmerId),
+    };
+
     try {
-      await axios[method](apiEndpoint, formData);
+      await axios[method](apiEndpoint, payload);
       onSuccess();
     } catch (err) {
       setError(err.response?.data?.message || 'An error occurred.');
@@ -90,6 +104,7 @@ const ProductForm = ({ open, onClose, onSuccess, product }) => {
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">

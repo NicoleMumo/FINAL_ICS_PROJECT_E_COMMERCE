@@ -26,7 +26,7 @@ router.get(
 );
 
 // User management
-router.get("/users/farmers", adminController.getFarmers);
+router.get("/admin/users/farmers", verifyAdmin, adminController.getFarmers);
 router.post("/admin/users", verifyAdmin, adminController.createUser);
 router.get("/admin/users", verifyAdmin, adminController.getAllUsers);
 router.get("/admin/users/:id", verifyAdmin, adminController.getUserById);
